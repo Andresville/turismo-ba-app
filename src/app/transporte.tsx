@@ -24,6 +24,7 @@ const traducciones = {
     cargando: "Cargando transportes...",
     sinDatos: "No hay líneas disponibles.",
     estaciones: "Estaciones / Paradas:",
+    cantidadEstaciones: (n: number) => `${n} estaciones`,
     nav: ["Inicio", "Mapa", "Transporte", "Resto", "Recorrido"],
   },
   en: {
@@ -34,9 +35,33 @@ const traducciones = {
     cargando: "Loading transit...",
     sinDatos: "No lines available.",
     estaciones: "Stations / Stops:",
+    cantidadEstaciones: (n: number) => `${n} stations`,
     nav: ["Home", "Map", "Transit", "Dining", "Itinerary"],
   },
 };
+
+// --- Tipos que reflejan la estructura real de la tabla "transporte" en Supabase ---
+interface CoordPoint {
+  latitude: number;
+  longitude: number;
+}
+
+interface EstacionJson {
+  nombre: string;
+}
+
+interface LineaTransporte {
+  id: string;
+  tipo: "subte" | "tren" | "bus";
+  nombre: string;
+  color: string;
+  ruta_es: string;
+  ruta_en: string;
+  paradas_es: string | null;
+  paradas_en: string | null;
+  coordenadas: CoordPoint[] | null;
+  estaciones_json: EstacionJson[] | null;
+}
 
 export default function TransporteScreen() {
   const theme = useAppTheme();
@@ -45,16 +70,20 @@ export default function TransporteScreen() {
   const router = useRouter();
 
   const [activeTab, setActiveTab] = useState<"subte" | "tren" | "bus">("subte");
-  const [transportes, setTransportes] = useState<any[]>([]);
+  const [transportes, setTransportes] = useState<LineaTransporte[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchTransportes = async () => {
       setLoading(true);
       try {
-        const { data, error } = await supabase.from("transporte").select("*");
+        const { data, error } = await supabase
+          .from("transporte")
+          .select(
+            "id, tipo, nombre, color, ruta_es, ruta_en, paradas_es, paradas_en, coordenadas, estaciones_json",
+          );
         if (error) throw error;
-        setTransportes(data || []);
+        setTransportes((data as LineaTransporte[]) || []);
       } catch (error) {
         console.error("Error al cargar transportes:", error);
       } finally {
@@ -131,16 +160,26 @@ export default function TransporteScreen() {
                   <View style={[styles.dot, { backgroundColor: item.color }]} />
                   <Text style={styles.circuitTitle}>{item.nombre}</Text>
                 </View>
+                {(item.estaciones_json?.length || item.coordenadas?.length) && (
+                  <Text style={styles.stationCount}>
+                    {t.cantidadEstaciones(
+                      item.estaciones_json?.length ??
+                        item.coordenadas?.length ??
+                        0,
+                    )}
+                  </Text>
+                )}
               </View>
 
               <Text style={styles.statText}>
                 {lang === "es" ? item.ruta_es : item.ruta_en}
               </Text>
 
+              {/* Recorrido completo: nombre de cada estación, en el orden real de la línea */}
               <Text style={styles.sectionLabel}>{t.estaciones}</Text>
               <Text style={styles.estacionesLista}>
-                {item.estaciones_json
-                  ? item.estaciones_json.map((e: any) => e.nombre).join(" • ")
+                {item.estaciones_json && item.estaciones_json.length > 0
+                  ? item.estaciones_json.map((e) => e.nombre).join(" • ")
                   : lang === "es"
                     ? item.paradas_es
                     : item.paradas_en}
@@ -257,6 +296,12 @@ const styles = StyleSheet.create({
   },
   titleWrapper: { flexDirection: "row", alignItems: "center", gap: 8 },
   circuitTitle: { fontSize: 14, fontWeight: "bold", color: "#1B2330" },
+  stationCount: {
+    fontSize: 10,
+    fontWeight: "700",
+    color: "#8B8F7E",
+    fontFamily: "monospace",
+  },
   dot: { width: 12, height: 12, borderRadius: 6 },
   statText: {
     fontFamily: "monospace",
