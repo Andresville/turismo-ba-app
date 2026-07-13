@@ -9,11 +9,13 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import MapView, { Marker } from "react-native-maps";
 import { Text } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { useItinerary } from "../context/ItineraryContext";
 import { useLang } from "../context/LangContext";
+import BottomNavBar from "../components/BottomNavBar";
 import { supabase } from "../lib/supabase";
 import { useAppTheme } from "../theme/colors";
 
@@ -148,6 +150,8 @@ export default function DetalleScreen() {
   }
 
   const iconName = getCategoryIcon(lugar.categoria);
+  const tieneAmbasFotos = !!(lugar.foto_actual_url && lugar.foto_antigua_url);
+  const fotoUrlAMostrar = tieneAmbasFotos ? (fotoVista === "actual" ? lugar.foto_actual_url : lugar.foto_antigua_url) : (lugar.foto_actual_url || lugar.foto_antigua_url);
 
   return (
     <SafeAreaView
@@ -157,6 +161,10 @@ export default function DetalleScreen() {
         style={styles.backBtn}
         onPress={() => router.back()}
         activeOpacity={0.8}
+        hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+        accessible={true}
+        accessibilityRole="button"
+        accessibilityLabel={globalLang === "es" ? "Volver a la pantalla anterior" : "Go back"}
       >
         <Ionicons name="arrow-back" size={24} color="#1B2330" />
       </TouchableOpacity>
@@ -168,67 +176,80 @@ export default function DetalleScreen() {
             { backgroundColor: fotoVista === "actual" ? "#1F4778" : "#8B7E63" },
           ]}
         >
-          <Image
-            source={{
-              uri:
-                fotoVista === "actual"
-                  ? lugar.foto_actual_url
-                  : lugar.foto_antigua_url,
-            }}
-            style={StyleSheet.absoluteFill} // Esto hace que ocupe todo el espacio
-            resizeMode="cover"
-          />
-          <View style={styles.capLabel}>
-            <Text style={styles.capText}>
-              {fotoVista === "actual" ? t.fotoActual : `${t.fotoAntigua}`}
-            </Text>
-          </View>
+          {fotoUrlAMostrar ? (
+            <Image
+              source={{ uri: fotoUrlAMostrar }}
+              style={StyleSheet.absoluteFill}
+              resizeMode="cover"
+            />
+          ) : (
+            <View style={[StyleSheet.absoluteFill, styles.centerAll, { backgroundColor: theme.colors.primary }]}>
+              <Ionicons name="image-outline" size={64} color="#fff" />
+            </View>
+          )}
+          {tieneAmbasFotos && (
+            <View style={styles.capLabel}>
+              <Text style={styles.capText}>
+                {fotoVista === "actual" ? t.fotoActual : `${t.fotoAntigua}`}
+              </Text>
+            </View>
+          )}
         </View>
 
-        <View style={styles.toggleRowRight}>
-          <View style={styles.togglePill}>
-            <TouchableOpacity
-              style={[
-                styles.toggleBtn,
-                fotoVista === "actual" && {
-                  backgroundColor: theme.colors.primary,
-                },
-              ]}
-              onPress={() => setFotoVista("actual")}
-            >
-              <Text
+        {tieneAmbasFotos && (
+          <View style={styles.toggleRowRight}>
+            <View style={styles.togglePill}>
+              <TouchableOpacity
                 style={[
-                  styles.toggleBtnText,
-                  fotoVista === "actual"
-                    ? { color: "#fff" }
-                    : { color: theme.colors.textSecondary },
+                  styles.toggleBtn,
+                  fotoVista === "actual" && {
+                    backgroundColor: theme.colors.primary,
+                  },
                 ]}
+                onPress={() => setFotoVista("actual")}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                accessible={true}
+                accessibilityRole="button"
+                accessibilityLabel={globalLang === 'es' ? 'Mostrar foto actual' : 'Show current photo'}
               >
-                {t.fotoActual}
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[
-                styles.toggleBtn,
-                fotoVista === "antigua" && {
-                  backgroundColor: theme.colors.primary,
-                },
-              ]}
-              onPress={() => setFotoVista("antigua")}
-            >
-              <Text
+                <Text
+                  style={[
+                    styles.toggleBtnText,
+                    fotoVista === "actual"
+                      ? { color: "#fff" }
+                      : { color: theme.colors.textSecondary },
+                  ]}
+                >
+                  {t.fotoActual}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
                 style={[
-                  styles.toggleBtnText,
-                  fotoVista === "antigua"
-                    ? { color: "#fff" }
-                    : { color: theme.colors.textSecondary },
+                  styles.toggleBtn,
+                  fotoVista === "antigua" && {
+                    backgroundColor: theme.colors.primary,
+                  },
                 ]}
+                onPress={() => setFotoVista("antigua")}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                accessible={true}
+                accessibilityRole="button"
+                accessibilityLabel={globalLang === 'es' ? 'Mostrar foto antigua' : 'Show historic photo'}
               >
-                {t.fotoAntigua}
-              </Text>
-            </TouchableOpacity>
+                <Text
+                  style={[
+                    styles.toggleBtnText,
+                    fotoVista === "antigua"
+                      ? { color: "#fff" }
+                      : { color: theme.colors.textSecondary },
+                  ]}
+                >
+                  {t.fotoAntigua}
+                </Text>
+              </TouchableOpacity>
+            </View>
           </View>
-        </View>
+        )}
 
         <View style={styles.poiTitleRow}>
           <Text style={styles.catText}>
@@ -245,6 +266,29 @@ export default function DetalleScreen() {
           </Text>
         </View>
 
+        {/* Previsualización del mapa (Minimapa de usabilidad) */}
+        <View style={styles.miniMapContainer}>
+          <MapView
+            style={styles.miniMap}
+            region={{
+              latitude: lugar.lat,
+              longitude: lugar.lng,
+              latitudeDelta: 0.0012,
+              longitudeDelta: 0.0012,
+            }}
+            minZoomLevel={16.5}
+            scrollEnabled={false}
+            zoomEnabled={false}
+            pitchEnabled={false}
+            rotateEnabled={false}
+          >
+            <Marker
+              coordinate={{ latitude: lugar.lat, longitude: lugar.lng }}
+              title={lugar.nombre}
+            />
+          </MapView>
+        </View>
+
         <View style={styles.descCard}>
           <View style={styles.descHeadRow}>
             <Text style={styles.descLabel}>{t.descripcion}</Text>
@@ -257,6 +301,10 @@ export default function DetalleScreen() {
                   },
                 ]}
                 onPress={() => setLocalLang("es")}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                accessible={true}
+                accessibilityRole="button"
+                accessibilityLabel={globalLang === 'es' ? 'Mostrar reseña en Español' : 'Show description in Spanish'}
               >
                 <Text
                   style={[
@@ -277,6 +325,10 @@ export default function DetalleScreen() {
                   },
                 ]}
                 onPress={() => setLocalLang("en")}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                accessible={true}
+                accessibilityRole="button"
+                accessibilityLabel={globalLang === 'es' ? 'Mostrar reseña en Inglés' : 'Show description in English'}
               >
                 <Text
                   style={[
@@ -313,6 +365,9 @@ export default function DetalleScreen() {
             ]}
             activeOpacity={0.8}
             onPress={openMaps}
+            accessible={true}
+            accessibilityRole="button"
+            accessibilityLabel={`${t.comoLlegar} a ${lugar.nombre}`}
           >
             <Ionicons name="navigate" size={16} color="#fff" />
             <Text style={[styles.actionBtnText, { color: "#fff" }]}>
@@ -332,6 +387,9 @@ export default function DetalleScreen() {
             ]}
             activeOpacity={0.8}
             onPress={() => toggleItem(lugar.id)}
+            accessible={true}
+            accessibilityRole="button"
+            accessibilityLabel={saved ? (globalLang === "es" ? "Quitar de Mi Recorrido" : "Remove from itinerary") : (globalLang === "es" ? "Guardar en Mi Recorrido" : "Save to itinerary")}
           >
             <Ionicons
               name={saved ? "heart" : "heart-outline"}
@@ -398,6 +456,7 @@ export default function DetalleScreen() {
 
         <View style={{ height: 40 }} />
       </ScrollView>
+      <BottomNavBar activeTab={0} />
     </SafeAreaView>
   );
 }
@@ -473,7 +532,7 @@ const styles = StyleSheet.create({
     color: "#1B2330",
     marginVertical: 6,
   },
-  locText: { fontSize: 12, color: "#8B8F7E" },
+  locText: { fontSize: 12, color: "#5A5E50" },
   descCard: {
     marginHorizontal: 18,
     marginTop: 16,
@@ -493,8 +552,21 @@ const styles = StyleSheet.create({
     fontFamily: "monospace",
     fontSize: 11,
     fontWeight: "bold",
-    color: "#8B8F7E",
+    color: "#5A5E50",
     textTransform: "uppercase",
+  },
+  miniMapContainer: {
+    marginHorizontal: 18,
+    marginTop: 12,
+    height: 120,
+    borderRadius: 12,
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: "#D9D2BC",
+  },
+  miniMap: {
+    width: "100%",
+    height: "100%",
   },
   descBody: { fontSize: 14, lineHeight: 22, color: "#1B2330" },
   actionRow: {

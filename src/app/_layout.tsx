@@ -17,7 +17,10 @@ export default function RootLayout() {
                 <Stack.Screen name="index" />
                 <Stack.Screen name="inicio" />
                 <Stack.Screen name="mapa" />
-                <Stack.Screen name="transporte" />
+                <Stack.Screen name="alojamientos" />
+                <Stack.Screen name="restaurantes" />
+                <Stack.Screen name="detalle-resto" />
+                <Stack.Screen name="recorrido" />
                 <Stack.Screen name="detalle" />
               </Stack>
             </PaperProvider>

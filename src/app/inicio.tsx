@@ -1,6 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React, { useEffect, useMemo, useState } from "react";
+import BottomNavBar from "../components/BottomNavBar";
 import {
   ActivityIndicator,
   Keyboard,
@@ -133,10 +134,6 @@ export default function InicioScreen() {
   const t = traducciones[lang];
   const router = useRouter();
   const { location, placeName } = useLocation();
-
-  const [activeTab, setActiveTab] = useState<"turistico" | "resto">(
-    "turistico",
-  );
   const [categoriaFiltro, setCategoriaFiltro] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState<string>("");
 
@@ -158,19 +155,11 @@ export default function InicioScreen() {
     const fetchDatos = async () => {
       setLoading(true);
       try {
-        if (activeTab === "turistico") {
-          const { data, error } = await supabase
-            .from("puntos_interes")
-            .select("id, nombre, categoria, lat, lng");
-          if (error) throw error;
-          setLugaresBd(data || []);
-        } else {
-          const { data, error } = await supabase
-            .from("restaurantes")
-            .select("id, nombre, reconocimiento, lat, lng");
-          if (error) throw error;
-          setLugaresBd(data || []);
-        }
+        const { data, error } = await supabase
+          .from("puntos_interes")
+          .select("id, nombre, categoria, lat, lng");
+        if (error) throw error;
+        setLugaresBd(data || []);
       } catch (error) {
         console.error("Error al cargar datos:", error);
       } finally {
@@ -181,7 +170,7 @@ export default function InicioScreen() {
     fetchDatos();
     setCategoriaFiltro(null);
     setSearchQuery("");
-  }, [activeTab]);
+  }, []);
 
   // Lógica inteligente de filtrado y visualización
   const lugaresMostrados = useMemo(() => {
@@ -211,7 +200,7 @@ export default function InicioScreen() {
     }
 
     // 3. Si no hay búsqueda pero seleccionó una categoría (Muestra TODOS los de esa categoría)
-    if (activeTab === "turistico" && categoriaFiltro) {
+    if (categoriaFiltro) {
       return listaConDistancia
         .filter((l) => l.categoria === categoriaFiltro)
         .sort((a, b) => a.dist - b.dist); // Los mostramos ordenados por cercanía
@@ -222,15 +211,17 @@ export default function InicioScreen() {
       listaConDistancia.sort((a, b) => a.dist - b.dist);
     }
     return listaConDistancia.slice(0, 6);
-  }, [lugaresBd, activeTab, categoriaFiltro, searchQuery, location]);
+  }, [lugaresBd, categoriaFiltro, searchQuery, location]);
 
   const handleCategoriaPress = (index: number) => {
-    if (index === 7) return; // Mi recorrido
+    if (index === 7) {
+      router.push("/recorrido" as any);
+      return;
+    }
 
     const dbCat = DB_CATEGORIAS[index];
     setCategoriaFiltro((prev) => (prev === dbCat ? null : dbCat));
     setSearchQuery(""); // Limpiamos la búsqueda si toca una categoría
-    setActiveTab("turistico");
     Keyboard.dismiss();
   };
 
@@ -299,63 +290,6 @@ export default function InicioScreen() {
           )}
         </View>
 
-        <View style={styles.segmented}>
-          <TouchableOpacity
-            style={[
-              styles.segBtn,
-              activeTab === "turistico" && {
-                backgroundColor: theme.colors.primary,
-              },
-            ]}
-            onPress={() => {
-              setActiveTab("turistico");
-              setCategoriaFiltro(null);
-              setSearchQuery("");
-            }}
-            activeOpacity={0.8}
-          >
-            <Text
-              style={[
-                styles.segText,
-                {
-                  color:
-                    activeTab === "turistico"
-                      ? "#fff"
-                      : theme.colors.textSecondary,
-                },
-              ]}
-            >
-              {t.tabTuristico}
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[
-              styles.segBtn,
-              activeTab === "resto" && {
-                backgroundColor: theme.colors.primary,
-              },
-            ]}
-            onPress={() => {
-              setActiveTab("resto");
-              setCategoriaFiltro(null);
-              setSearchQuery("");
-            }}
-            activeOpacity={0.8}
-          >
-            <Text
-              style={[
-                styles.segText,
-                {
-                  color:
-                    activeTab === "resto" ? "#fff" : theme.colors.textSecondary,
-                },
-              ]}
-            >
-              {t.tabResto}
-            </Text>
-          </TouchableOpacity>
-        </View>
-
         <Text style={styles.sectionLabel}>{t.catTitulo}</Text>
         <View style={styles.catGrid}>
           {t.categorias.map((cat, index) => {
@@ -419,9 +353,8 @@ export default function InicioScreen() {
         ) : (
           <View style={styles.verticalGrid}>
             {lugaresMostrados.map((lugar) => {
-              const isResto = activeTab === "resto";
-              const tipo = isResto ? lugar.reconocimiento : lugar.categoria;
-              const config = getVisualConfig(tipo, isResto);
+              const tipo = lugar.categoria;
+              const config = getVisualConfig(tipo, false);
 
               return (
                 <TouchableOpacity
@@ -429,14 +362,10 @@ export default function InicioScreen() {
                   style={styles.poiCardGrid}
                   activeOpacity={0.9}
                   onPress={() => {
-                    if (activeTab === "turistico") {
-                      router.push({
-                        pathname: "/detalle",
-                        params: { id: lugar.id },
-                      });
-                    } else {
-                      // Futuro: router.push('/detalle-resto')
-                    }
+                    router.push({
+                      pathname: "/detalle",
+                      params: { id: lugar.id },
+                    });
                   }}
                 >
                   <View
@@ -469,45 +398,7 @@ export default function InicioScreen() {
         <View style={{ height: 24 }} />
       </ScrollView>
 
-      <View style={styles.bottomNav}>
-        {t.nav.map((item, index) => {
-          const navIcons = [
-            "home",
-            "map-outline",
-            "bus-outline",
-            "restaurant-outline",
-            "list-outline",
-          ];
-          const isActive = index === 0;
-          return (
-            <TouchableOpacity
-              key={index}
-              style={styles.navItem}
-              activeOpacity={0.7}
-              onPress={() => {
-                if (index === 1) router.push("/mapa");
-                if (index === 2) router.push("/transporte");
-              }}
-            >
-              <Ionicons
-                name={isActive ? "home" : (navIcons[index] as any)}
-                size={22}
-                color={
-                  isActive ? theme.colors.primary : theme.colors.textSecondary
-                }
-              />
-              <Text
-                style={[
-                  styles.navText,
-                  isActive && { color: theme.colors.primary },
-                ]}
-              >
-                {item}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
-      </View>
+      <BottomNavBar activeTab={0} />
     </SafeAreaView>
   );
 }
