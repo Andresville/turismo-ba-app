@@ -6,7 +6,7 @@ import {
   ScrollView,
   StyleSheet,
   TouchableOpacity,
-  View,
+  View
 } from "react-native";
 import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from "react-native-maps";
 import { Text } from "react-native-paper";
@@ -71,6 +71,40 @@ const traducciones = {
     cargando: "Loading map...",
   },
 };
+
+const getDistanceSquared = (lat1: number, lon1: number, lat2: number, lon2: number) => {
+  const dLat = lat2 - lat1;
+  const dLon = lon2 - lon1;
+  return dLat * dLat + dLon * dLon;
+};
+
+const ordenarPorCercania = (puntos: any[], startLat: number, startLng: number): any[] => {
+  const result: any[] = [];
+  const pool = [...puntos];
+  let currentLat = startLat;
+  let currentLng = startLng;
+
+  while (pool.length > 0) {
+    let bestIndex = 0;
+    let bestDist = getDistanceSquared(currentLat, currentLng, pool[0].lat, pool[0].lng);
+
+    for (let i = 1; i < pool.length; i++) {
+      const dist = getDistanceSquared(currentLat, currentLng, pool[i].lat, pool[i].lng);
+      if (dist < bestDist) {
+        bestDist = dist;
+        bestIndex = i;
+      }
+    }
+
+    const nextPlace = pool.splice(bestIndex, 1)[0];
+    result.push(nextPlace);
+    currentLat = nextPlace.lat;
+    currentLng = nextPlace.lng;
+  }
+
+  return result;
+};
+
 // Los métodos auxiliares locales getMarkerColor y getMarkerIcon han sido reemplazados por los centralizados en src/theme/colors.ts
 
 export default function MapaScreen() {
@@ -199,10 +233,12 @@ export default function MapaScreen() {
     const fetchItineraryRoute = async () => {
       if (esItinerarioActivo && lugaresMostrados.length >= 2) {
         try {
-          // Ordena los lugares por el orden en que se guardaron
-          const ordenados = [...lugaresMostrados].sort(
-            (a, b) => savedItems.indexOf(a.id) - savedItems.indexOf(b.id)
-          );
+          // 1. Obtener punto inicial (ubicación del usuario o Obelisco si no está disponible)
+          const startLat = location ? location.coords.latitude : -34.6037;
+          const startLng = location ? location.coords.longitude : -58.3816;
+
+          // 2. Ordenar por cercanía secuencial (vecino más cercano)
+          const ordenados = ordenarPorCercania(lugaresMostrados, startLat, startLng);
 
           // Construye la lista de coordenadas para OSRM: lon1,lat1;lon2,lat2;lon3,lat3...
           const coordsString = ordenados.map((l) => `${l.lng},${l.lat}`).join(";");
@@ -223,9 +259,9 @@ export default function MapaScreen() {
         } catch (error) {
           console.error("Error al calcular ruta de itinerario real:", error);
           // Fallback: usar líneas rectas si la API falla
-          const ordenados = [...lugaresMostrados].sort(
-            (a, b) => savedItems.indexOf(a.id) - savedItems.indexOf(b.id)
-          );
+          const startLat = location ? location.coords.latitude : -34.6037;
+          const startLng = location ? location.coords.longitude : -58.3816;
+          const ordenados = ordenarPorCercania(lugaresMostrados, startLat, startLng);
           setLineaItinerarioCoords(ordenados.map((l) => ({ latitude: l.lat, longitude: l.lng })));
         }
       } else {
@@ -234,7 +270,7 @@ export default function MapaScreen() {
     };
 
     fetchItineraryRoute();
-  }, [esItinerarioActivo, lugaresMostrados, savedItems]);
+  }, [esItinerarioActivo, lugaresMostrados, savedItems, location]);
 
   // Calcular región del mapa inicial
   const regionInicial = useMemo(() => {
@@ -344,19 +380,30 @@ export default function MapaScreen() {
                     key={lugar.id}
                     coordinate={{ latitude: lugar.lat, longitude: lugar.lng }}
                     title={lugar.nombre}
-                    description={String(labelExhibido).toUpperCase()}
+                    description={lang === "es" ? "Ver detalle →" : "View details →"}
+                    onCalloutPress={() => {
+                      setTimeout(() => {
+                        router.push({
+                          pathname: lugar.categoria === "Restaurantes" ? "/detalle-resto" as any : "/detalle" as any,
+                          params: { id: lugar.id },
+                        });
+                      }, 100);
+                    }}
                   >
-                    <View
-                      style={[
-                        styles.customMarkerCircle,
-                        { backgroundColor: getCategoryColor(lugar.categoria) },
-                      ]}
-                    >
-                      <Ionicons
-                        name={mapIconName as any}
-                        size={11}
-                        color="#fff"
-                      />
+                    {/* Contenedor transparente más grande para ampliar el hit target táctil */}
+                    <View style={styles.markerHitTarget} pointerEvents="none">
+                      <View
+                        style={[
+                          styles.customMarkerCircle,
+                          { backgroundColor: getCategoryColor(lugar.categoria) },
+                        ]}
+                      >
+                        <Ionicons
+                          name={mapIconName as any}
+                          size={11}
+                          color="#fff"
+                        />
+                      </View>
                     </View>
                   </Marker>
                 );
@@ -366,9 +413,8 @@ export default function MapaScreen() {
               {rutaCaminando.length > 0 && (
                 <Polyline
                   coordinates={rutaCaminando}
-                  strokeColor={theme.colors.primary}
-                  strokeWidth={4}
-                  lineDashPattern={[6, 6]}
+                  strokeColor={theme.colors.secondary}
+                  strokeWidth={4.5}
                 />
               )}
 
@@ -447,8 +493,8 @@ const styles = StyleSheet.create({
   },
   map: { width: "100%", height: "100%" },
   customMarkerCircle: {
-    width: 22,
-    height: 22,
+    width: 25,
+    height: 25,
     borderRadius: 11,
     borderWidth: 1.5,
     borderColor: "#fff",
@@ -471,4 +517,46 @@ const styles = StyleSheet.create({
   legendItem: { flexDirection: "row", alignItems: "center", gap: 6 },
   legendDot: { width: 9, height: 9, borderRadius: 4.5 },
   legendText: { fontSize: 10.5, color: "#5B6270", fontWeight: "600" },
+  markerHitTarget: {
+    width: 44,
+    height: 44,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "transparent",
+  },
+  calloutTooltip: {
+    width: 170,
+    height: 60,
+    backgroundColor: "#FBF9F2", // marfil-card
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#D9D2BC", // linea-borde
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 8,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 3,
+    elevation: 4,
+  },
+  calloutInner: {
+    width: "100%",
+    height: "100%",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  calloutTitle: {
+    fontSize: 13,
+    fontWeight: "bold",
+    color: "#1B2330",
+    textAlign: "center",
+    marginBottom: 4,
+  },
+  calloutLink: {
+    fontSize: 11.5,
+    fontWeight: "700",
+    color: "#C9542A",
+    textAlign: "center",
+  },
 });

@@ -1,7 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React, { useEffect, useMemo, useState } from "react";
-import BottomNavBar from "../components/BottomNavBar";
 import {
   ActivityIndicator,
   Image,
@@ -14,11 +13,12 @@ import {
 } from "react-native";
 import { Card, Text } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
+import BottomNavBar from "../components/BottomNavBar";
 
 import { useLang } from "../context/LangContext";
 import { useLocation } from "../context/LocationContext";
 import { supabase } from "../lib/supabase";
-import { useAppTheme, getCategoryLabel, getCategoryColor, getCategoryIcon, getCategoryBadgeColors } from "../theme/colors";
+import { getCategoryBadgeColors, getCategoryColor, getCategoryIcon, getCategoryLabel, useAppTheme } from "../theme/colors";
 
 const DB_CATEGORIAS = [
   "Museos",
@@ -103,9 +103,9 @@ const calcularDistancia = (
   const a =
     Math.sin(dLat / 2) * Math.sin(dLat / 2) +
     Math.cos(lat1 * rad) *
-      Math.cos(lat2 * rad) *
-      Math.sin(dLon / 2) *
-      Math.sin(dLon / 2);
+    Math.cos(lat2 * rad) *
+    Math.sin(dLon / 2) *
+    Math.sin(dLon / 2);
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   return Math.round(R * c);
 };
@@ -168,11 +168,11 @@ export default function InicioScreen() {
       const dist =
         location && lugar.lat && lugar.lng
           ? calcularDistancia(
-              location.coords.latitude,
-              location.coords.longitude,
-              lugar.lat,
-              lugar.lng,
-            )
+            location.coords.latitude,
+            location.coords.longitude,
+            lugar.lat,
+            lugar.lng,
+          )
           : 0;
       return { ...lugar, dist };
     });
@@ -236,9 +236,6 @@ export default function InicioScreen() {
               : ` ${t.ubicacionDefault}`}
           </Text>
         </View>
-        <TouchableOpacity style={styles.iconBtn} activeOpacity={0.7}>
-          <Ionicons name="globe-outline" size={18} color="#fff" />
-        </TouchableOpacity>
       </View>
 
       <ScrollView
