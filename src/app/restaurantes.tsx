@@ -52,6 +52,7 @@ interface Restaurante {
   direccion: string;
   lat: number;
   lng: number;
+  foto_url?: string;
 }
 
 export default function RestaurantesScreen() {
@@ -69,7 +70,7 @@ export default function RestaurantesScreen() {
       try {
         const { data, error } = await supabase
           .from("restaurantes")
-          .select("id, nombre, reconocimiento, comuna, direccion, lat, lng");
+          .select("id, nombre, reconocimiento, comuna, direccion, lat, lng, foto_url");
         if (error) throw error;
         setRestaurantes((data as Restaurante[]) || []);
       } catch (error) {
@@ -118,7 +119,7 @@ export default function RestaurantesScreen() {
         ) : (
           <View style={styles.listContainer}>
             {restaurantes.map((item) => {
-              const foto = FOTOS_RESTAURANTES[item.id];
+              const foto = item.foto_url ? { uri: item.foto_url } : FOTOS_RESTAURANTES[item.id];
               const recColors = getReconocimientoColors(item.reconocimiento);
               const recLabel = getReconocimientoLabel(item.reconocimiento);
 

@@ -13,9 +13,9 @@ import MapView, { Marker } from "react-native-maps";
 import { Text } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import BottomNavBar from "../components/BottomNavBar";
 import { useItinerary } from "../context/ItineraryContext";
 import { useLang } from "../context/LangContext";
-import BottomNavBar from "../components/BottomNavBar";
 import { supabase } from "../lib/supabase";
 import { useAppTheme } from "../theme/colors";
 
@@ -59,6 +59,7 @@ interface Restaurante {
   resena_especial_en: string;
   lat: number;
   lng: number;
+  foto_url?: string;
 }
 
 export default function DetalleRestoScreen() {
@@ -123,7 +124,7 @@ export default function DetalleRestoScreen() {
     );
   }
 
-  const foto = FOTOS_RESTAURANTES[resto.id];
+  const foto = resto.foto_url ? { uri: resto.foto_url } : FOTOS_RESTAURANTES[resto.id];
   const isMichelin = resto.reconocimiento.toLowerCase().includes("michelin");
   const recColors = isMichelin
     ? { bg: "#FCE8E6", text: "#C9542A", border: "#F5B4AD" }
@@ -165,9 +166,9 @@ export default function DetalleRestoScreen() {
             </View>
             <Text style={styles.communeText}>{t.comuna(resto.comuna)}</Text>
           </View>
-          
+
           <Text style={styles.titleText}>{resto.nombre}</Text>
-          
+
           <Text style={styles.locText}>
             <Ionicons name="location-sharp" size={12} color={theme.colors.textSecondary} />
             {" "}{resto.direccion}
@@ -181,10 +182,13 @@ export default function DetalleRestoScreen() {
             region={{
               latitude: resto.lat,
               longitude: resto.lng,
-              latitudeDelta: 0.0012,
-              longitudeDelta: 0.0012,
+              latitudeDelta: 0.004,
+              longitudeDelta: 0.004,
             }}
-            minZoomLevel={16.5}
+            cameraZoomRange={{
+              minCenterCoordinateDistance: 100,
+              maxCenterCoordinateDistance: 200,
+            }}
             scrollEnabled={false}
             zoomEnabled={false}
             pitchEnabled={false}

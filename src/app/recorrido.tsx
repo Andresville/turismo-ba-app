@@ -16,7 +16,7 @@ import BottomNavBar from "../components/BottomNavBar";
 import { useItinerary } from "../context/ItineraryContext";
 import { useLang } from "../context/LangContext";
 import { supabase } from "../lib/supabase";
-import { useAppTheme } from "../theme/colors";
+import { useAppTheme, getCategoryLabel } from "../theme/colors";
 
 const traducciones = {
   es: {
@@ -62,7 +62,7 @@ export default function RecorridoScreen() {
   const t = traducciones[lang as keyof typeof traducciones] || traducciones.es;
   const router = useRouter();
 
-  const { savedItems } = useItinerary();
+  const { savedItems, toggleItem } = useItinerary();
   const [lugares, setLugares] = useState<Lugar[]>([]);
   const [visitedItems, setVisitedItems] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
@@ -72,13 +72,27 @@ export default function RecorridoScreen() {
     const fetchLugares = async () => {
       setLoading(true);
       try {
-        const { data, error } = await supabase
-          .from("puntos_interes")
-          .select("id, nombre, categoria, comuna, lat, lng");
-        if (error) throw error;
-        setLugares((data as Lugar[]) || []);
+        const [puntosRes, restosRes] = await Promise.all([
+          supabase
+            .from("puntos_interes")
+            .select("id, nombre, categoria, comuna, lat, lng, direccion"),
+          supabase
+            .from("restaurantes")
+            .select("id, nombre, comuna, lat, lng, direccion")
+        ]);
+
+        if (puntosRes.error) throw puntosRes.error;
+        if (restosRes.error) throw restosRes.error;
+
+        const puntos = puntosRes.data || [];
+        const restos = (restosRes.data || []).map((r) => ({
+          ...r,
+          categoria: "Restaurantes",
+        }));
+
+        setLugares([...puntos, ...restos] as Lugar[]);
       } catch (error) {
-        console.error("Error al cargar puntos de interés para itinerario:", error);
+        console.error("Error al cargar puntos de interés y restaurantes para itinerario:", error);
       } finally {
         setLoading(false);
       }
@@ -242,16 +256,16 @@ export default function RecorridoScreen() {
                         <TouchableOpacity
                           style={styles.placeInfo}
                           activeOpacity={0.8}
-                          onPress={() => router.push({ pathname: "/detalle", params: { id: lugar.id } })}
+                          onPress={() => router.push({ pathname: lugar.categoria === "Restaurantes" ? "/detalle-resto" as any : "/detalle" as any, params: { id: lugar.id } })}
                           accessible={true}
                           accessibilityRole="link"
-                          accessibilityLabel={`${lugar.nombre}, ${lugar.categoria}. ${lang === 'es' ? 'Toca para ver detalles' : 'Double tap to view details'}`}
+                          accessibilityLabel={`${lugar.nombre}, ${getCategoryLabel(lugar.categoria, lang)}. ${lang === 'es' ? 'Toca para ver detalles' : 'Double tap to view details'}`}
                         >
                           <Text style={[styles.placeName, visited && styles.textLineThrough]} numberOfLines={1}>
                             {lugar.nombre}
                           </Text>
                           <Text style={styles.placeCat} numberOfLines={1}>
-                            {lugar.categoria.toUpperCase()}
+                            {getCategoryLabel(lugar.categoria, lang).toUpperCase()}
                           </Text>
                         </TouchableOpacity>
 
@@ -266,6 +280,21 @@ export default function RecorridoScreen() {
                             </Text>
                           </View>
                         )}
+
+                        {/* Botón de eliminar del itinerario */}
+                        <TouchableOpacity
+                          style={styles.deleteBtn}
+                          onPress={() => toggleItem(lugar.id)}
+                          activeOpacity={0.7}
+                          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                          accessible={true}
+                          accessibilityRole="button"
+                          accessibilityLabel={lang === 'es'
+                            ? `Eliminar ${lugar.nombre} del recorrido`
+                            : `Remove ${lugar.nombre} from itinerary`}
+                        >
+                          <Ionicons name="trash-outline" size={17} color="#A83232" />
+                        </TouchableOpacity>
                       </View>
                     );
                   })}
@@ -467,5 +496,11 @@ const styles = StyleSheet.create({
     fontSize: 6,
     fontFamily: "monospace",
     fontWeight: "bold",
+  },
+  deleteBtn: {
+    padding: 6,
+    justifyContent: "center",
+    alignItems: "center",
+    marginLeft: 6,
   },
 });

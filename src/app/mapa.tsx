@@ -17,7 +17,7 @@ import { useItinerary } from "../context/ItineraryContext";
 import { useLang } from "../context/LangContext";
 import { useLocation } from "../context/LocationContext";
 import { supabase } from "../lib/supabase";
-import { useAppTheme } from "../theme/colors";
+import { getCategoryColor, getCategoryIcon, getCategoryLabel, useAppTheme } from "../theme/colors";
 
 const traducciones = {
   es: {
@@ -43,13 +43,6 @@ const traducciones = {
       "Comuna 14 (Palermo)",
       "Comuna 15 (Villa Crespo/Chacarita)",
     ],
-    leyenda: {
-      edificio: "Edificio histórico",
-      parque: "Parque",
-      museo: "Museo",
-      teatro: "Teatro / Cancha",
-      zona: "Zona turística",
-    },
     cargando: "Cargando mapa...",
   },
   en: {
@@ -75,35 +68,10 @@ const traducciones = {
       "Commune 14 (Palermo)",
       "Commune 15 (Villa Crespo)",
     ],
-    leyenda: {
-      edificio: "Historic building",
-      parque: "Park",
-      museo: "Museum",
-      teatro: "Theater / Stadium",
-      zona: "Tourist zone",
-    },
     cargando: "Loading map...",
   },
 };
-
-const getMarkerColor = (categoria: string) => {
-  switch (categoria) {
-    case "Museos":
-      return "#C9542A";
-    case "Parques":
-      return "#3F6B4F";
-    case "Edificios historicos":
-      return "#1F4778";
-    case "Teatros":
-    case "Canchas de futbol":
-      return "#7C5FA8";
-    case "Zonas turisticas":
-    case "Cupulas":
-      return "#E0A23A";
-    default:
-      return "#5B6270";
-  }
-};
+// Los métodos auxiliares locales getMarkerColor y getMarkerIcon han sido reemplazados por los centralizados en src/theme/colors.ts
 
 export default function MapaScreen() {
   const theme = useAppTheme();
@@ -175,17 +143,30 @@ export default function MapaScreen() {
     fetchRuta();
   }, [location, destinoActivo]);
 
-  // 3. Cargar todos los puntos de interés de Supabase
+  // 3. Cargar todos los puntos de interés y restaurantes de Supabase
   useEffect(() => {
     const fetchMapa = async () => {
       setLoading(true);
       try {
-        const { data, error } = await supabase
-          .from("puntos_interes")
-          .select("id, nombre, categoria, comuna, lat, lng");
+        const [puntosRes, restosRes] = await Promise.all([
+          supabase
+            .from("puntos_interes")
+            .select("id, nombre, categoria, comuna, lat, lng"),
+          supabase
+            .from("restaurantes")
+            .select("id, nombre, comuna, lat, lng")
+        ]);
 
-        if (error) throw error;
-        setLugares(data || []);
+        if (puntosRes.error) throw puntosRes.error;
+        if (restosRes.error) throw restosRes.error;
+
+        const puntos = puntosRes.data || [];
+        const restos = (restosRes.data || []).map((r) => ({
+          ...r,
+          categoria: "Restaurantes",
+        }));
+
+        setLugares([...puntos, ...restos]);
       } catch (error) {
         console.error("Error al cargar mapa:", error);
       } finally {
@@ -208,9 +189,9 @@ export default function MapaScreen() {
       return lugares.filter((l) => savedItems.includes(l.id));
     }
     if (comunaActiva === 0) {
-      return lugares;
+      return lugares.filter((l) => l.categoria !== "Restaurantes");
     }
-    return lugares.filter((l) => l.comuna === comunaActiva);
+    return lugares.filter((l) => l.comuna === comunaActiva && l.categoria !== "Restaurantes");
   }, [lugares, destinoActivo, esItinerarioActivo, savedItems, comunaActiva]);
 
   // 4. Calcular ruta real a pie calle por calle para el itinerario conectado
@@ -222,15 +203,15 @@ export default function MapaScreen() {
           const ordenados = [...lugaresMostrados].sort(
             (a, b) => savedItems.indexOf(a.id) - savedItems.indexOf(b.id)
           );
-          
+
           // Construye la lista de coordenadas para OSRM: lon1,lat1;lon2,lat2;lon3,lat3...
           const coordsString = ordenados.map((l) => `${l.lng},${l.lat}`).join(";");
-          
+
           const url = `https://router.project-osrm.org/route/v1/foot/${coordsString}?overview=full&geometries=geojson`;
-          
+
           const response = await fetch(url);
           const data = await response.json();
-          
+
           if (data.routes && data.routes.length > 0) {
             const coords = data.routes[0].geometry.coordinates;
             const formattedCoords = coords.map((c: [number, number]) => ({
@@ -292,8 +273,8 @@ export default function MapaScreen() {
             {destinoActivo
               ? `🚶 ${t.rutaHacia} ${destinoActivo.nombre}`
               : esItinerarioActivo
-              ? `⭐ ${t.itinerarioActivo} (${lugaresMostrados.length})`
-              : `${lugaresMostrados.length} ${t.subtitulo}`}
+                ? `⭐ ${t.itinerarioActivo} (${lugaresMostrados.length})`
+                : `${lugaresMostrados.length} ${t.subtitulo}`}
           </Text>
         </View>
       </View>
@@ -355,14 +336,29 @@ export default function MapaScreen() {
               {/* Renderizado de marcadores */}
               {lugaresMostrados.map((lugar) => {
                 if (!lugar.lat || !lugar.lng) return null;
+                const iconName = getCategoryIcon(lugar.categoria);
+                const mapIconName = iconName.endsWith("-outline") ? iconName : `${iconName}-outline`;
+                const labelExhibido = getCategoryLabel(lugar.categoria, lang);
                 return (
                   <Marker
                     key={lugar.id}
                     coordinate={{ latitude: lugar.lat, longitude: lugar.lng }}
-                    pinColor={getMarkerColor(lugar.categoria)}
                     title={lugar.nombre}
-                    description={String(lugar.categoria).toUpperCase()}
-                  />
+                    description={String(labelExhibido).toUpperCase()}
+                  >
+                    <View
+                      style={[
+                        styles.customMarkerCircle,
+                        { backgroundColor: getCategoryColor(lugar.categoria) },
+                      ]}
+                    >
+                      <Ionicons
+                        name={mapIconName as any}
+                        size={11}
+                        color="#fff"
+                      />
+                    </View>
+                  </Marker>
                 );
               })}
 
@@ -388,28 +384,22 @@ export default function MapaScreen() {
           )}
         </View>
 
-        {/* Leyenda del Mapa */}
+        {/* Leyenda del Mapa Dinámica */}
         <View style={styles.mapLegend}>
-          <View style={styles.legendItem}>
-            <View style={[styles.legendDot, { backgroundColor: "#1F4778" }]} />
-            <Text style={styles.legendText}>{t.leyenda.edificio}</Text>
-          </View>
-          <View style={styles.legendItem}>
-            <View style={[styles.legendDot, { backgroundColor: "#3F6B4F" }]} />
-            <Text style={styles.legendText}>{t.leyenda.parque}</Text>
-          </View>
-          <View style={styles.legendItem}>
-            <View style={[styles.legendDot, { backgroundColor: "#C9542A" }]} />
-            <Text style={styles.legendText}>{t.leyenda.museo}</Text>
-          </View>
-          <View style={styles.legendItem}>
-            <View style={[styles.legendDot, { backgroundColor: "#7C5FA8" }]} />
-            <Text style={styles.legendText}>{t.leyenda.teatro}</Text>
-          </View>
-          <View style={styles.legendItem}>
-            <View style={[styles.legendDot, { backgroundColor: "#E0A23A" }]} />
-            <Text style={styles.legendText}>{t.leyenda.zona}</Text>
-          </View>
+          {[
+            "Edificios historicos",
+            "Parques",
+            "Museos",
+            "Teatros",
+            "Canchas de futbol",
+            "Zonas turisticas",
+            "Cupulas",
+          ].map((cat) => (
+            <View key={cat} style={styles.legendItem}>
+              <View style={[styles.legendDot, { backgroundColor: getCategoryColor(cat) }]} />
+              <Text style={styles.legendText}>{getCategoryLabel(cat, lang)}</Text>
+            </View>
+          ))}
         </View>
       </View>
 
@@ -456,6 +446,20 @@ const styles = StyleSheet.create({
     backgroundColor: "#E4DFCF",
   },
   map: { width: "100%", height: "100%" },
+  customMarkerCircle: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    borderWidth: 1.5,
+    borderColor: "#fff",
+    justifyContent: "center",
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.25,
+    shadowRadius: 1.5,
+    elevation: 3,
+  },
   loadingWrapper: { flex: 1, justifyContent: "center", alignItems: "center" },
   mapLegend: {
     flexDirection: "row",

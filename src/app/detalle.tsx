@@ -13,11 +13,11 @@ import MapView, { Marker } from "react-native-maps";
 import { Text } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import BottomNavBar from "../components/BottomNavBar";
 import { useItinerary } from "../context/ItineraryContext";
 import { useLang } from "../context/LangContext";
-import BottomNavBar from "../components/BottomNavBar";
 import { supabase } from "../lib/supabase";
-import { useAppTheme } from "../theme/colors";
+import { useAppTheme, getCategoryIcon, getCategoryLabel } from "../theme/colors";
 
 const traducciones = {
   es: {
@@ -46,26 +46,7 @@ const traducciones = {
   },
 };
 
-const getCategoryIcon = (categoria: string) => {
-  switch (categoria) {
-    case "Museos":
-      return "color-palette";
-    case "Parques":
-      return "leaf";
-    case "Edificios historicos":
-      return "business";
-    case "Teatros":
-      return "ticket";
-    case "Cupulas":
-      return "business-outline";
-    case "Canchas de futbol":
-      return "football";
-    case "Zonas turisticas":
-      return "map";
-    default:
-      return "location";
-  }
-};
+// El selector local getCategoryIcon ha sido reemplazado por la función centralizada en src/theme/colors.ts
 
 export default function DetalleScreen() {
   const { id } = useLocalSearchParams();
@@ -253,7 +234,7 @@ export default function DetalleScreen() {
 
         <View style={styles.poiTitleRow}>
           <Text style={styles.catText}>
-            {lugar.categoria} · Comuna {lugar.comuna}
+            {getCategoryLabel(lugar.categoria, localLang)} · Comuna {lugar.comuna}
           </Text>
           <Text style={styles.titleText}>{lugar.nombre}</Text>
           <Text style={styles.locText}>
@@ -273,10 +254,13 @@ export default function DetalleScreen() {
             region={{
               latitude: lugar.lat,
               longitude: lugar.lng,
-              latitudeDelta: 0.0012,
-              longitudeDelta: 0.0012,
+              latitudeDelta: 0.004,
+              longitudeDelta: 0.004,
             }}
-            minZoomLevel={16.5}
+            cameraZoomRange={{
+              minCenterCoordinateDistance: 100,
+              maxCenterCoordinateDistance: 200,
+            }}
             scrollEnabled={false}
             zoomEnabled={false}
             pitchEnabled={false}

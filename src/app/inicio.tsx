@@ -4,6 +4,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import BottomNavBar from "../components/BottomNavBar";
 import {
   ActivityIndicator,
+  Image,
   Keyboard,
   ScrollView,
   StyleSheet,
@@ -11,13 +12,13 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { Text } from "react-native-paper";
+import { Card, Text } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { useLang } from "../context/LangContext";
 import { useLocation } from "../context/LocationContext";
 import { supabase } from "../lib/supabase";
-import { useAppTheme } from "../theme/colors";
+import { useAppTheme, getCategoryLabel, getCategoryColor, getCategoryIcon, getCategoryBadgeColors } from "../theme/colors";
 
 const DB_CATEGORIAS = [
   "Museos",
@@ -45,7 +46,7 @@ const traducciones = {
       "Cúpulas",
       "Edificios",
       "Teatros",
-      "Canchas",
+      "Estadios",
       "Zonas turísticas",
       "Mi recorrido",
     ],
@@ -83,24 +84,10 @@ const traducciones = {
 
 const getVisualConfig = (categoria: string, isResto: boolean) => {
   if (isResto) return { icon: "restaurant", color: "#C9542A" };
-  switch (categoria) {
-    case "Museos":
-      return { icon: "color-palette", color: "#C9542A" };
-    case "Parques":
-      return { icon: "leaf", color: "#3F6B4F" };
-    case "Edificios historicos":
-      return { icon: "business", color: "#1F4778" };
-    case "Teatros":
-      return { icon: "ticket", color: "#7C5FA8" };
-    case "Cupulas":
-      return { icon: "business-outline", color: "#E0A23A" };
-    case "Canchas de futbol":
-      return { icon: "football", color: "#3F6B4F" };
-    case "Zonas turisticas":
-      return { icon: "map", color: "#E0A23A" };
-    default:
-      return { icon: "location", color: "#5B6270" };
-  }
+  return {
+    icon: getCategoryIcon(categoria),
+    color: getCategoryColor(categoria),
+  };
 };
 
 const calcularDistancia = (
@@ -157,7 +144,7 @@ export default function InicioScreen() {
       try {
         const { data, error } = await supabase
           .from("puntos_interes")
-          .select("id, nombre, categoria, lat, lng");
+          .select("id, nombre, categoria, lat, lng, direccion, foto_actual_url, foto_antigua_url");
         if (error) throw error;
         setLugaresBd(data || []);
       } catch (error) {
@@ -351,16 +338,18 @@ export default function InicioScreen() {
             <Text style={styles.loadingText}>{t.sinResultados}</Text>
           </View>
         ) : (
-          <View style={styles.verticalGrid}>
+          <View style={styles.listContainer}>
             {lugaresMostrados.map((lugar) => {
               const tipo = lugar.categoria;
               const config = getVisualConfig(tipo, false);
+              const labelExhibido = getCategoryLabel(tipo, lang);
+              const badgeColors = getCategoryBadgeColors(tipo);
+              const fotoUrl = lugar.foto_actual_url || lugar.foto_antigua_url;
 
               return (
-                <TouchableOpacity
+                <Card
                   key={lugar.id}
-                  style={styles.poiCardGrid}
-                  activeOpacity={0.9}
+                  style={[styles.card, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}
                   onPress={() => {
                     router.push({
                       pathname: "/detalle",
@@ -368,29 +357,50 @@ export default function InicioScreen() {
                     });
                   }}
                 >
-                  <View
-                    style={[styles.poiThumb, { backgroundColor: config.color }]}
-                  >
-                    <Ionicons
-                      name={config.icon as any}
-                      size={28}
-                      color="#fff"
-                    />
-                  </View>
-                  <View style={styles.poiBody}>
-                    <Text style={styles.poiName} numberOfLines={1}>
-                      {lugar.nombre}
-                    </Text>
-                    <Text style={styles.poiType} numberOfLines={1}>
-                      {String(tipo).toUpperCase()}
-                    </Text>
-                    <View style={styles.distPill}>
-                      <Text style={styles.distText}>
-                        {location ? formatDistancia(lugar.dist) : "GPS off"}
+                  <View style={styles.photoContainer}>
+                    {fotoUrl ? (
+                      <Image source={{ uri: fotoUrl }} style={styles.cardImage} resizeMode="cover" />
+                    ) : (
+                      <View style={[styles.placeholderPhoto, { backgroundColor: theme.colors.background }]}>
+                        <Ionicons name={config.icon as any} size={32} color={theme.colors.textSecondary} />
+                      </View>
+                    )}
+                    <View
+                      style={[
+                        styles.badge,
+                        {
+                          backgroundColor: badgeColors.bg,
+                          borderColor: badgeColors.border,
+                        },
+                      ]}
+                    >
+                      <Text style={[styles.badgeText, { color: badgeColors.text }]}>
+                        {labelExhibido}
                       </Text>
                     </View>
                   </View>
-                </TouchableOpacity>
+
+                  <Card.Content style={styles.cardBody}>
+                    <View style={styles.nameRow}>
+                      <Text style={styles.restName} numberOfLines={1}>
+                        {lugar.nombre}
+                      </Text>
+                      {location && (
+                        <View style={styles.distPill}>
+                          <Text style={styles.distText}>
+                            {formatDistancia(lugar.dist)}
+                          </Text>
+                        </View>
+                      )}
+                    </View>
+                    <View style={styles.infoRow}>
+                      <Ionicons name="location-outline" size={12} color={theme.colors.textSecondary} />
+                      <Text style={[styles.infoText, { color: theme.colors.textSecondary }]} numberOfLines={1}>
+                        {lugar.direccion || "Dirección no disponible"}
+                      </Text>
+                    </View>
+                  </Card.Content>
+                </Card>
               );
             })}
           </View>
@@ -503,41 +513,81 @@ const styles = StyleSheet.create({
     color: "#C9542A",
     marginBottom: 8,
   },
-  verticalGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "space-between",
-    marginTop: 4,
+  listContainer: {
+    paddingTop: 8,
+    gap: 16,
   },
-  poiCardGrid: {
-    width: "48%",
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    marginBottom: 14,
+  card: {
     borderWidth: 1,
-    borderColor: "#D9D2BC",
+    borderRadius: 14,
     overflow: "hidden",
+    elevation: 0,
+    marginBottom: 8,
   },
-  poiThumb: { height: 74, justifyContent: "center", alignItems: "center" },
-  poiBody: { padding: 8 },
-  poiName: {
-    fontSize: 11.5,
+  photoContainer: {
+    height: 140,
+    position: "relative",
+    backgroundColor: "#ccc",
+  },
+  cardImage: {
+    width: "100%",
+    height: "100%",
+  },
+  placeholderPhoto: {
+    width: "100%",
+    height: "100%",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  badge: {
+    position: "absolute",
+    top: 12,
+    left: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  badgeText: {
+    fontSize: 10,
+    fontWeight: "bold",
+    textTransform: "uppercase",
+    fontFamily: "monospace",
+  },
+  cardBody: {
+    padding: 12,
+  },
+  nameRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  restName: {
+    fontSize: 15,
     fontWeight: "bold",
     color: "#1B2330",
-    marginBottom: 2,
+    flex: 1,
+    marginRight: 8,
   },
-  poiType: { fontSize: 9.5, color: "#8B8F7E", fontFamily: "monospace" },
+  infoRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 6,
+    gap: 4,
+  },
+  infoText: {
+    fontSize: 11.5,
+    flex: 1,
+  },
   distPill: {
-    alignSelf: "flex-start",
     backgroundColor: "#EFEADD",
     paddingVertical: 2,
     paddingHorizontal: 6,
     borderRadius: 5,
-    marginTop: 5,
   },
   distText: {
     color: "#1F4778",
-    fontSize: 9,
+    fontSize: 10,
     fontWeight: "bold",
     fontFamily: "monospace",
   },
