@@ -14,89 +14,69 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import BottomNavBar from "../components/BottomNavBar";
 import { useItinerary } from "../context/ItineraryContext";
-import { useLang } from "../context/LangContext";
 import { supabase } from "../lib/supabase";
 import { useAppTheme, getCategoryLabel } from "../theme/colors";
-
-const traducciones = {
-  es: {
-    titulo: "Mi Recorrido",
-    subtitulo: "Tu pasaporte de viaje por Buenos Aires",
-    vacíoTitulo: "Tu pasaporte está vacío",
-    vacíoDesc: "Explorá los puntos de interés de la ciudad y guardalos con el corazón ❤️ para armar tu circuito personalizado.",
-    btnExplorar: "Buscar lugares",
-    progreso: "Progreso del recorrido",
-    verMapa: "Ver circuito en el mapa",
-    visitado: "VISITADO",
-    selloFecha: "BA EXPRESS",
-    comuna: (c: number) => `Comuna ${c}`,
-    cargando: "Cargando itinerario...",
-  },
-  en: {
-    titulo: "My Itinerary",
-    subtitulo: "Your travel passport through Buenos Aires",
-    vacíoTitulo: "Your passport is empty",
-    vacíoDesc: "Explore the city's points of interest and save them with a heart ❤️ to build your custom tour.",
-    btnExplorar: "Search places",
-    progreso: "Itinerary Progress",
-    verMapa: "View circuit on map",
-    visitado: "VISITED",
-    selloFecha: "BA EXPRESS",
-    comuna: (c: number) => `Commune ${c}`,
-    cargando: "Loading itinerary...",
-  },
-};
-
-interface Lugar {
-  id: string;
-  nombre: string;
-  categoria: string;
-  comuna: number;
-  lat: number;
-  lng: number;
-}
+import { useTranslation } from "../locales/i18n";
+import { Lugar } from "../types/database";
+import { offlineCache, OFFLINE_KEYS } from "../lib/offline-cache";
+import { OfflineBanner, ErrorState } from "../components/connection-status";
 
 export default function RecorridoScreen() {
   const theme = useAppTheme();
-  const { lang } = useLang();
-  const t = traducciones[lang as keyof typeof traducciones] || traducciones.es;
+  const { t, lang } = useTranslation();
   const router = useRouter();
 
   const { savedItems, toggleItem } = useItinerary();
   const [lugares, setLugares] = useState<Lugar[]>([]);
   const [visitedItems, setVisitedItems] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isOffline, setIsOffline] = useState(false);
+  const [errorLoading, setErrorLoading] = useState(false);
 
-  // 1. Cargar lugares de Supabase
+  const fetchLugares = async () => {
+    setLoading(true);
+    setErrorLoading(false);
+    try {
+      const [puntosRes, restosRes] = await Promise.all([
+        offlineCache.get<Lugar[]>(
+          OFFLINE_KEYS.PUNTOS_INTERES,
+          async () => {
+            const { data, error } = await supabase
+              .from("puntos_interes")
+              .select("*");
+            if (error) throw error;
+            return data || [];
+          }
+        ),
+        offlineCache.get<any[]>(
+          OFFLINE_KEYS.RESTAURANTES,
+          async () => {
+            const { data, error } = await supabase
+              .from("restaurantes")
+              .select("*");
+            if (error) throw error;
+            return data || [];
+          }
+        )
+      ]);
+
+      const puntos = puntosRes.data || [];
+      const restos = (restosRes.data || []).map((r) => ({
+        ...r,
+        categoria: "Restaurantes",
+      }));
+
+      setLugares([...puntos, ...restos] as Lugar[]);
+      setIsOffline(puntosRes.isOffline || restosRes.isOffline);
+    } catch (error) {
+      console.error("Error al cargar puntos de interés y restaurantes para itinerario:", error);
+      setErrorLoading(true);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchLugares = async () => {
-      setLoading(true);
-      try {
-        const [puntosRes, restosRes] = await Promise.all([
-          supabase
-            .from("puntos_interes")
-            .select("id, nombre, categoria, comuna, lat, lng, direccion"),
-          supabase
-            .from("restaurantes")
-            .select("id, nombre, comuna, lat, lng, direccion")
-        ]);
-
-        if (puntosRes.error) throw puntosRes.error;
-        if (restosRes.error) throw restosRes.error;
-
-        const puntos = puntosRes.data || [];
-        const restos = (restosRes.data || []).map((r) => ({
-          ...r,
-          categoria: "Restaurantes",
-        }));
-
-        setLugares([...puntos, ...restos] as Lugar[]);
-      } catch (error) {
-        console.error("Error al cargar puntos de interés y restaurantes para itinerario:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchLugares();
   }, []);
 
@@ -151,18 +131,21 @@ export default function RecorridoScreen() {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
+      <OfflineBanner isOffline={isOffline} />
       {/* Cabecera superior "Chapa" */}
       <View style={[styles.chapaBar, { backgroundColor: theme.colors.primary }]}>
         <View>
-          <Text style={styles.chapaTitle}>{t.titulo}</Text>
-          <Text style={styles.chapaSub}>{t.subtitulo}</Text>
+          <Text style={styles.chapaTitle}>{t("recorrido.titulo")}</Text>
+          <Text style={styles.chapaSub}>{t("recorrido.subtitulo")}</Text>
         </View>
       </View>
 
-      {loading ? (
+      {errorLoading ? (
+        <ErrorState onRetry={fetchLugares} />
+      ) : loading ? (
         <View style={styles.centerContainer}>
           <ActivityIndicator size="large" color={theme.colors.primary} />
-          <Text style={[styles.loadingText, { color: theme.colors.textSecondary }]}>{t.cargando}</Text>
+          <Text style={[styles.loadingText, { color: theme.colors.textSecondary }]}>{t("recorrido.cargando")}</Text>
         </View>
       ) : lugaresGuardados.length === 0 ? (
         // Estado vacío: Sin lugares guardados
@@ -170,17 +153,17 @@ export default function RecorridoScreen() {
           <View style={[styles.emptyIconCircle, { backgroundColor: "#FFF9EE", borderColor: "#D9D2BC" }]}>
             <Ionicons name="compass-outline" size={48} color={theme.colors.primary} />
           </View>
-          <Text style={styles.emptyTitle}>{t.vacíoTitulo}</Text>
-          <Text style={[styles.emptyDesc, { color: "#5A5E50" }]}>{t.vacíoDesc}</Text>
+          <Text style={styles.emptyTitle}>{t("recorrido.vacíoTitulo")}</Text>
+          <Text style={[styles.emptyDesc, { color: "#5A5E50" }]}>{t("recorrido.vacíoDesc")}</Text>
           <TouchableOpacity
             style={[styles.btnExplorar, { backgroundColor: theme.colors.primary }]}
             onPress={() => router.push("/inicio")}
             activeOpacity={0.8}
             accessible={true}
             accessibilityRole="button"
-            accessibilityLabel={t.btnExplorar}
+            accessibilityLabel={t("recorrido.btnExplorar")}
           >
-            <Text style={styles.btnExplorarText}>{t.btnExplorar}</Text>
+            <Text style={styles.btnExplorarText}>{t("recorrido.btnExplorar")}</Text>
           </TouchableOpacity>
         </View>
       ) : (
@@ -189,7 +172,7 @@ export default function RecorridoScreen() {
           {/* Panel de Progreso */}
           <View style={[styles.progressCard, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
             <View style={styles.progressHeader}>
-              <Text style={styles.progressLabel}>{t.progreso}</Text>
+              <Text style={styles.progressLabel}>{t("recorrido.progreso")}</Text>
               <Text style={[styles.progressVal, { color: theme.colors.primary }]}>
                 {Math.round(progressPercent * 100)}%
               </Text>
@@ -206,7 +189,7 @@ export default function RecorridoScreen() {
               activeOpacity={0.8}
             >
               <Ionicons name="map" size={16} color="#fff" />
-              <Text style={styles.btnMapaText}>{t.verMapa}</Text>
+              <Text style={styles.btnMapaText}>{t("recorrido.verMapa")}</Text>
             </TouchableOpacity>
           </View>
 
@@ -219,7 +202,7 @@ export default function RecorridoScreen() {
                 <View key={comunaNum} style={styles.comunaGroup}>
                   {/* Etiqueta de Comuna */}
                   <Text style={[styles.comunaLabel, { color: theme.colors.textSecondary }]}>
-                    {t.comuna(comunaNum)}
+                    {t("recorrido.comuna", { c: comunaNum })}
                   </Text>
 
                   {/* Lista de lugares de la comuna */}
@@ -273,10 +256,10 @@ export default function RecorridoScreen() {
                         {visited && (
                           <View style={[styles.passportStamp, { borderColor: theme.colors.secondary }]}>
                             <Text style={[styles.stampTextMain, { color: theme.colors.secondary }]}>
-                              {t.visitado}
+                              {t("recorrido.visitado")}
                             </Text>
                             <Text style={[styles.stampTextSub, { color: theme.colors.secondary }]}>
-                              {t.selloFecha}
+                              {t("recorrido.selloFecha")}
                             </Text>
                           </View>
                         )}

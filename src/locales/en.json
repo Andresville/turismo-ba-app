@@ -1,0 +1,116 @@
+{
+  "inicio": {
+    "ciudad": "Buenos Aires",
+    "ubicacionPrefix": "you are in",
+    "ubicacionDefault": "Finding location...",
+    "buscar": "Search place, district or zone…",
+    "tabTuristico": "Tourist",
+    "tabResto": "Dining",
+    "catTitulo": "Categories",
+    "categorias": [
+      "Museums",
+      "Parks",
+      "Domes",
+      "Buildings",
+      "Theaters",
+      "Stadiums",
+      "Tourist Zones",
+      "My Itinerary"
+    ],
+    "cercaTitulo": "Near you",
+    "resultadosBusqueda": "Search results",
+    "cargando": "Finding places...",
+    "sinResultados": "No places found.",
+    "nav": ["Home", "Map", "Transit", "Dining", "Itinerary"]
+  },
+  "mapa": {
+    "titulo": "City Map",
+    "subtitulo": "points of interest",
+    "rutaHacia": "Route to",
+    "itinerarioActivo": "Your custom tour route",
+    "cargando": "Loading map...",
+    "verDetalle": "View details →",
+    "comunas": [
+      "All communes",
+      "Commune 1 (Downtown)",
+      "Commune 2 (Recoleta)",
+      "Commune 3 (Balvanera)",
+      "Commune 4 (La Boca)",
+      "Commune 5 (Almagro)",
+      "Commune 6 (Caballito)",
+      "Commune 7 (Flores)",
+      "Commune 8 (Lugano)",
+      "Commune 9 (Mataderos)",
+      "Commune 10 (Villa Luro)",
+      "Commune 11 (Devoto)",
+      "Commune 12 (Saavedra)",
+      "Commune 13 (Belgrano)",
+      "Commune 14 (Palermo)",
+      "Commune 15 (Villa Crespo)"
+    ]
+  },
+  "recorrido": {
+    "titulo": "My Itinerary",
+    "subtitulo": "Your travel passport through Buenos Aires",
+    "vacioTitulo": "Your passport is empty",
+    "vacioDesc": "Explore the city's points of interest and save them with a heart ❤️ to build your custom tour.",
+    "btnExplorar": "Search places",
+    "progreso": "Itinerary Progress",
+    "verMapa": "View circuit on map",
+    "visitado": "VISITED",
+    "selloFecha": "BA EXPRESS",
+    "comuna": "Commune {c}",
+    "cargando": "Loading itinerary..."
+  },
+  "restaurantes": {
+    "titulo": "Dining",
+    "subtitulo": "Recommended city gastronomy",
+    "cargando": "Finding restaurants...",
+    "sinDatos": "No restaurants available.",
+    "michelin": "Michelin Star",
+    "bodegon": "Historic Tavern",
+    "comuna": "Commune {c}"
+  },
+  "alojamientos": {
+    "titulo": "Lodgings",
+    "subtitulo": "Recommended hotels and accommodations",
+    "filtroTodos": "All",
+    "filtroLujo": "Luxury",
+    "filtroBoutique": "Boutique",
+    "filtroHostel": "Hostel",
+    "comoLlegar": "Directions",
+    "llamar": "Call",
+    "sitioWeb": "Website",
+    "estrellas": "stars",
+    "precio": "Price:",
+    "cargando": "Finding lodgings..."
+  },
+  "detalle": {
+    "fotoActual": "Current",
+    "fotoAntigua": "Vintage",
+    "sinFoto": "Photo unavailable",
+    "descripcion": "Description",
+    "historia": "Historical review",
+    "comoLlegar": "Directions",
+    "guardar": "Save",
+    "guardado": "Saved",
+    "cercanos": "Nearby places",
+    "cargando": "Loading information..."
+  },
+  "detalleResto": {
+    "resena": "Special review",
+    "direccion": "Address",
+    "comoLlegar": "Directions",
+    "guardar": "Save",
+    "guardado": "Saved",
+    "cargando": "Loading information...",
+    "michelin": "Michelin Star",
+    "bodegon": "Historic Tavern",
+    "comuna": "Commune {c}"
+  },
+  "common": {
+    "noInternet": "No internet connection",
+    "reintentar": "Retry",
+    "datosGuardados": "Using saved offline data"
+  }
+}

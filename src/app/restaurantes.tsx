@@ -3,7 +3,6 @@ import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
-  Image,
   ScrollView,
   StyleSheet,
   TouchableOpacity,
@@ -11,32 +10,15 @@ import {
 } from "react-native";
 import { Card, Text } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { Image } from "expo-image";
 
 import BottomNavBar from "../components/BottomNavBar";
-import { useLang } from "../context/LangContext";
 import { supabase } from "../lib/supabase";
 import { useAppTheme } from "../theme/colors";
-
-const traducciones = {
-  es: {
-    titulo: "Restaurantes",
-    subtitulo: "Gastronomía recomendada de la ciudad",
-    cargando: "Buscando restaurantes...",
-    sinDatos: "No hay restaurantes disponibles.",
-    michelin: "Estrella Michelin",
-    bodegon: "Bodegón Histórico",
-    comuna: (c: number) => `Comuna ${c}`,
-  },
-  en: {
-    titulo: "Dining",
-    subtitulo: "Recommended city gastronomy",
-    cargando: "Finding restaurants...",
-    sinDatos: "No restaurants available.",
-    michelin: "Michelin Star",
-    bodegon: "Historic Tavern",
-    comuna: (c: number) => `Commune ${c}`,
-  },
-};
+import { useTranslation } from "../locales/i18n";
+import { Restaurante } from "../types/database";
+import { offlineCache, OFFLINE_KEYS } from "../lib/offline-cache";
+import { OfflineBanner, ErrorState } from "../components/connection-status";
 
 // Mapeo dinámico de imágenes locales basadas en los IDs de la base de datos
 const FOTOS_RESTAURANTES: Record<string, any> = {
@@ -44,47 +26,47 @@ const FOTOS_RESTAURANTES: Record<string, any> = {
   "09fec52d-54ed-472b-bcb2-3615a9d9996f": require("../../assets/images/el-obrero.png"),
 };
 
-interface Restaurante {
-  id: string;
-  nombre: string;
-  reconocimiento: string;
-  comuna: number;
-  direccion: string;
-  lat: number;
-  lng: number;
-  foto_url?: string;
-}
-
 export default function RestaurantesScreen() {
   const theme = useAppTheme();
-  const { lang } = useLang();
-  const t = traducciones[lang as keyof typeof traducciones] || traducciones.es;
+  const { t, lang } = useTranslation();
   const router = useRouter();
 
   const [restaurantes, setRestaurantes] = useState<Restaurante[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isOffline, setIsOffline] = useState(false);
+  const [errorLoading, setErrorLoading] = useState(false);
+
+  const fetchRestaurantes = async () => {
+    setLoading(true);
+    setErrorLoading(false);
+    try {
+      const { data, isOffline: offline } = await offlineCache.get<Restaurante[]>(
+        OFFLINE_KEYS.RESTAURANTES,
+        async () => {
+          const { data: dbData, error } = await supabase
+            .from("restaurantes")
+            .select("*");
+          if (error) throw error;
+          return dbData || [];
+        }
+      );
+      setRestaurantes(data);
+      setIsOffline(offline);
+    } catch (error) {
+      console.error("Error al cargar restaurantes:", error);
+      setErrorLoading(true);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchRestaurantes = async () => {
-      setLoading(true);
-      try {
-        const { data, error } = await supabase
-          .from("restaurantes")
-          .select("id, nombre, reconocimiento, comuna, direccion, lat, lng, foto_url");
-        if (error) throw error;
-        setRestaurantes((data as Restaurante[]) || []);
-      } catch (error) {
-        console.error("Error al cargar restaurantes:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchRestaurantes();
   }, []);
 
   const getReconocimientoLabel = (rec: string) => {
-    if (rec.toLowerCase().includes("michelin")) return t.michelin;
-    if (rec.toLowerCase().includes("bodegon") || rec.toLowerCase().includes("bodegón")) return t.bodegon;
+    if (rec.toLowerCase().includes("michelin")) return t("restaurantes.michelin");
+    if (rec.toLowerCase().includes("bodegon") || rec.toLowerCase().includes("bodegón")) return t("restaurantes.bodegon");
     return rec;
   };
 
@@ -97,27 +79,31 @@ export default function RestaurantesScreen() {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
+      <OfflineBanner isOffline={isOffline} />
       {/* Cabecera superior "Chapa" */}
       <View style={[styles.chapaBar, { backgroundColor: theme.colors.primary }]}>
         <View>
-          <Text style={styles.chapaTitle}>{t.titulo}</Text>
-          <Text style={styles.chapaSub}>{t.subtitulo}</Text>
+          <Text style={styles.chapaTitle}>{t("restaurantes.titulo")}</Text>
+          <Text style={styles.chapaSub}>{t("restaurantes.subtitulo")}</Text>
         </View>
       </View>
 
-      <ScrollView style={styles.scrollArea} showsVerticalScrollIndicator={false}>
-        {loading ? (
-          <View style={styles.centerContainer}>
-            <ActivityIndicator size="large" color={theme.colors.primary} />
-            <Text style={[styles.loadingText, { color: theme.colors.textSecondary }]}>{t.cargando}</Text>
-          </View>
-        ) : restaurantes.length === 0 ? (
-          <View style={styles.centerContainer}>
-            <Ionicons name="restaurant-outline" size={48} color={theme.colors.border} />
-            <Text style={[styles.loadingText, { color: theme.colors.textSecondary }]}>{t.sinDatos}</Text>
-          </View>
-        ) : (
-          <View style={styles.listContainer}>
+      {errorLoading ? (
+        <ErrorState onRetry={fetchRestaurantes} />
+      ) : (
+        <ScrollView style={styles.scrollArea} showsVerticalScrollIndicator={false}>
+          {loading ? (
+            <View style={styles.centerContainer}>
+              <ActivityIndicator size="large" color={theme.colors.primary} />
+              <Text style={[styles.loadingText, { color: theme.colors.textSecondary }]}>{t("restaurantes.cargando")}</Text>
+            </View>
+          ) : restaurantes.length === 0 ? (
+            <View style={styles.centerContainer}>
+              <Ionicons name="restaurant-outline" size={48} color={theme.colors.border} />
+              <Text style={[styles.loadingText, { color: theme.colors.textSecondary }]}>{t("restaurantes.sinDatos")}</Text>
+            </View>
+          ) : (
+            <View style={styles.listContainer}>
             {restaurantes.map((item) => {
               const foto = item.foto_url ? { uri: item.foto_url } : FOTOS_RESTAURANTES[item.id];
               const recColors = getReconocimientoColors(item.reconocimiento);
@@ -136,7 +122,7 @@ export default function RestaurantesScreen() {
                 >
                   <View style={styles.photoContainer}>
                     {foto ? (
-                      <Image source={foto} style={styles.cardImage} resizeMode="cover" />
+                      <Image source={foto} style={styles.cardImage} contentFit="cover" transition={200} />
                     ) : (
                       <View style={[styles.placeholderPhoto, { backgroundColor: theme.colors.background }]}>
                         <Ionicons name="restaurant" size={32} color={theme.colors.textSecondary} />
@@ -146,13 +132,13 @@ export default function RestaurantesScreen() {
                       <Text style={[styles.badgeText, { color: recColors.text }]}>{recLabel}</Text>
                     </View>
                   </View>
-
+ 
                   <Card.Content style={styles.cardBody}>
                     <Text style={styles.restName}>{item.nombre}</Text>
                     <View style={styles.infoRow}>
                       <Ionicons name="location-outline" size={12} color={theme.colors.textSecondary} />
                       <Text style={[styles.infoText, { color: theme.colors.textSecondary }]}>
-                        {item.direccion} · {t.comuna(item.comuna)}
+                        {item.direccion} · {t("restaurantes.comuna", { c: item.comuna })}
                       </Text>
                     </View>
                   </Card.Content>
@@ -162,7 +148,8 @@ export default function RestaurantesScreen() {
           </View>
         )}
         <View style={{ height: 20 }} />
-      </ScrollView>
+        </ScrollView>
+      )}
 
       {/* Pie de navegación */}
       <BottomNavBar activeTab={3} />

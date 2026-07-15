@@ -3,7 +3,6 @@ import { useRouter } from "expo-router";
 import React, { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
-  Image,
   Keyboard,
   ScrollView,
   StyleSheet,
@@ -13,12 +12,16 @@ import {
 } from "react-native";
 import { Card, Text } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { Image } from "expo-image";
 import BottomNavBar from "../components/BottomNavBar";
 
-import { useLang } from "../context/LangContext";
 import { useLocation } from "../context/LocationContext";
 import { supabase } from "../lib/supabase";
 import { getCategoryBadgeColors, getCategoryColor, getCategoryIcon, getCategoryLabel, useAppTheme } from "../theme/colors";
+import { useTranslation } from "../locales/i18n";
+import { Lugar } from "../types/database";
+import { offlineCache, OFFLINE_KEYS } from "../lib/offline-cache";
+import { OfflineBanner, ErrorState } from "../components/connection-status";
 
 const DB_CATEGORIAS = [
   "Museos",
@@ -30,65 +33,6 @@ const DB_CATEGORIAS = [
   "Zonas turisticas",
   "recorrido",
 ];
-
-const traducciones = {
-  es: {
-    ciudad: "Buenos Aires",
-    ubicacionPrefix: "estás en",
-    ubicacionDefault: "Buscando ubicación...",
-    buscar: "Buscar lugar, comuna o zona…",
-    tabTuristico: "Turístico",
-    tabResto: "Restaurantes",
-    catTitulo: "Categorías",
-    categorias: [
-      "Museos",
-      "Parques",
-      "Cúpulas",
-      "Edificios",
-      "Teatros",
-      "Estadios",
-      "Zonas turísticas",
-      "Mi recorrido",
-    ],
-    cercaTitulo: "Cerca tuyo",
-    resultadosBusqueda: "Resultados de búsqueda",
-    cargando: "Buscando lugares...",
-    sinResultados: "No se encontraron lugares.",
-    nav: ["Inicio", "Mapa", "Transporte", "Resto", "Recorrido"],
-  },
-  en: {
-    ciudad: "Buenos Aires",
-    ubicacionPrefix: "you are in",
-    ubicacionDefault: "Finding location...",
-    buscar: "Search place, district or zone…",
-    tabTuristico: "Tourist",
-    tabResto: "Dining",
-    catTitulo: "Categories",
-    categorias: [
-      "Museums",
-      "Parks",
-      "Domes",
-      "Buildings",
-      "Theaters",
-      "Stadiums",
-      "Tourist Zones",
-      "My Itinerary",
-    ],
-    cercaTitulo: "Near you",
-    resultadosBusqueda: "Search results",
-    cargando: "Finding places...",
-    sinResultados: "No places found.",
-    nav: ["Home", "Map", "Transit", "Dining", "Itinerary"],
-  },
-};
-
-const getVisualConfig = (categoria: string, isResto: boolean) => {
-  if (isResto) return { icon: "restaurant", color: "#C9542A" };
-  return {
-    icon: getCategoryIcon(categoria),
-    color: getCategoryColor(categoria),
-  };
-};
 
 const calcularDistancia = (
   lat1: number,
@@ -115,16 +59,25 @@ const formatDistancia = (metros: number) => {
   return `${(metros / 1000).toFixed(1)} km`;
 };
 
+const getVisualConfig = (categoria: string, isResto: boolean) => {
+  if (isResto) return { icon: "restaurant", color: "#C9542A" };
+  return {
+    icon: getCategoryIcon(categoria),
+    color: getCategoryColor(categoria),
+  };
+};
+
 export default function InicioScreen() {
   const theme = useAppTheme();
-  const { lang } = useLang();
-  const t = traducciones[lang];
+  const { t, lang } = useTranslation();
   const router = useRouter();
   const { location, placeName } = useLocation();
   const [categoriaFiltro, setCategoriaFiltro] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState<string>("");
 
-  const [lugaresBd, setLugaresBd] = useState<any[]>([]);
+  const [lugaresBd, setLugaresBd] = useState<Lugar[]>([]);
+  const [isOffline, setIsOffline] = useState(false);
+  const [errorLoading, setErrorLoading] = useState(false);
   const [loading, setLoading] = useState(true);
 
   const catIcons = [
@@ -138,22 +91,31 @@ export default function InicioScreen() {
     "trail-sign-outline",
   ];
 
-  useEffect(() => {
-    const fetchDatos = async () => {
-      setLoading(true);
-      try {
-        const { data, error } = await supabase
-          .from("puntos_interes")
-          .select("id, nombre, categoria, lat, lng, direccion, foto_actual_url, foto_antigua_url");
-        if (error) throw error;
-        setLugaresBd(data || []);
-      } catch (error) {
-        console.error("Error al cargar datos:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
+  const fetchDatos = async () => {
+    setLoading(true);
+    setErrorLoading(false);
+    try {
+      const { data, isOffline: offline } = await offlineCache.get<Lugar[]>(
+        OFFLINE_KEYS.PUNTOS_INTERES,
+        async () => {
+          const { data: dbData, error } = await supabase
+            .from("puntos_interes")
+            .select("*");
+          if (error) throw error;
+          return dbData || [];
+        }
+      );
+      setLugaresBd(data);
+      setIsOffline(offline);
+    } catch (error) {
+      console.error("Error al cargar datos:", error);
+      setErrorLoading(true);
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  useEffect(() => {
     fetchDatos();
     setCategoriaFiltro(null);
     setSearchQuery("");
@@ -214,149 +176,161 @@ export default function InicioScreen() {
 
   // Determinar dinámicamente el título de la sección inferior
   const getTituloSeccion = () => {
-    if (searchQuery.trim().length > 0) return t.resultadosBusqueda;
-    if (categoriaFiltro)
-      return t.categorias[DB_CATEGORIAS.indexOf(categoriaFiltro)];
-    return t.cercaTitulo;
+    if (searchQuery.trim().length > 0) return t("inicio.resultadosBusqueda");
+    if (categoriaFiltro) {
+      const idx = DB_CATEGORIAS.indexOf(categoriaFiltro);
+      return (t("inicio.categorias") as string[])[idx];
+    }
+    return t("inicio.cercaTitulo");
   };
 
   return (
     <SafeAreaView
       style={[styles.container, { backgroundColor: theme.colors.background }]}
     >
+      <OfflineBanner isOffline={isOffline} />
       <View
         style={[styles.chapaBar, { backgroundColor: theme.colors.primary }]}
       >
         <View>
-          <Text style={styles.chapaTitle}>{t.ciudad}</Text>
+          <Text style={styles.chapaTitle}>{t("inicio.ciudad")}</Text>
           <Text style={styles.chapaSub}>
             <Ionicons name="location-sharp" size={12} color="#C7D2E3" />
             {placeName
-              ? ` ${t.ubicacionPrefix} ${placeName}`
-              : ` ${t.ubicacionDefault}`}
+              ? ` ${t("inicio.ubicacionPrefix")} ${placeName}`
+              : ` ${t("inicio.ubicacionDefault")}`}
           </Text>
         </View>
       </View>
 
-      <ScrollView
-        style={styles.scrollArea}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-      >
-        {/* Barra de Búsqueda conectada al estado */}
-        <View style={styles.searchBar}>
-          <Ionicons
-            name="search"
-            size={18}
-            color={theme.colors.textSecondary}
-          />
-          <TextInput
-            placeholder={t.buscar}
-            placeholderTextColor={theme.colors.textSecondary}
-            style={styles.searchInput}
-            value={searchQuery}
-            onChangeText={(text) => {
-              setSearchQuery(text);
-              if (text.length > 0) setCategoriaFiltro(null);
-            }}
-          />
-          {searchQuery.length > 0 && (
-            <TouchableOpacity
-              onPress={() => setSearchQuery("")}
-              style={{ padding: 4 }}
-            >
-              <Ionicons
-                name="close-circle"
-                size={16}
-                color={theme.colors.textSecondary}
-              />
-            </TouchableOpacity>
-          )}
-        </View>
-
-        <Text style={styles.sectionLabel}>{t.catTitulo}</Text>
-        <View style={styles.catGrid}>
-          {t.categorias.map((cat, index) => {
-            const isFiltroActivo = categoriaFiltro === DB_CATEGORIAS[index];
-            return (
+      {errorLoading ? (
+        <ErrorState onRetry={fetchDatos} />
+      ) : (
+        <ScrollView
+          style={styles.scrollArea}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
+          {/* Barra de Búsqueda conectada al estado */}
+          <View style={styles.searchBar}>
+            <Ionicons
+              name="search"
+              size={18}
+              color={theme.colors.textSecondary}
+            />
+            <TextInput
+              placeholder={t("inicio.buscar")}
+              placeholderTextColor={theme.colors.textSecondary}
+              style={styles.searchInput}
+              value={searchQuery}
+              onChangeText={(text) => {
+                setSearchQuery(text);
+                if (text.length > 0) setCategoriaFiltro(null);
+              }}
+            />
+            {searchQuery.length > 0 && (
               <TouchableOpacity
-                key={index}
-                style={[
-                  styles.catTile,
-                  isFiltroActivo && {
-                    borderColor: theme.colors.primary,
-                    backgroundColor: "#E4ECF7",
-                  },
-                ]}
-                activeOpacity={0.7}
-                onPress={() => handleCategoriaPress(index)}
+                onPress={() => setSearchQuery("")}
+                style={{ padding: 4 }}
               >
                 <Ionicons
-                  name={catIcons[index] as any}
-                  size={22}
-                  color={isFiltroActivo ? theme.colors.primary : "#1F4778"}
+                  name="close-circle"
+                  size={16}
+                  color={theme.colors.textSecondary}
                 />
-                <Text
-                  style={[
-                    styles.catTileText,
-                    isFiltroActivo && { color: theme.colors.primary },
-                  ]}
-                  numberOfLines={2}
-                >
-                  {cat}
-                </Text>
               </TouchableOpacity>
-            );
-          })}
-        </View>
-
-        {/* Cabecera dinámica de la sección de resultados */}
-        <View style={styles.cercaTuyoHeader}>
-          <Text style={styles.sectionLabel}>{getTituloSeccion()}</Text>
-          {(categoriaFiltro || searchQuery.length > 0) && (
-            <TouchableOpacity
-              onPress={() => {
-                setCategoriaFiltro(null);
-                setSearchQuery("");
-              }}
-            >
-              <Text style={styles.clearFilter}>Limpiar</Text>
-            </TouchableOpacity>
-          )}
-        </View>
-
-        {loading ? (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="small" color={theme.colors.primary} />
-            <Text style={styles.loadingText}>{t.cargando}</Text>
+            )}
           </View>
-        ) : lugaresMostrados.length === 0 ? (
-          <View style={styles.loadingContainer}>
-            <Text style={styles.loadingText}>{t.sinResultados}</Text>
-          </View>
-        ) : (
-          <View style={styles.listContainer}>
-            {lugaresMostrados.map((lugar) => {
-              const tipo = lugar.categoria;
-              const config = getVisualConfig(tipo, false);
-              const labelExhibido = getCategoryLabel(tipo, lang);
-              const badgeColors = getCategoryBadgeColors(tipo);
-              const fotoUrl = lugar.foto_actual_url || lugar.foto_antigua_url;
 
+          <Text style={styles.sectionLabel}>{t("inicio.catTitulo")}</Text>
+          <View style={styles.catGrid}>
+            {(t("inicio.categorias") as string[]).map((cat, index) => {
+              const isFiltroActivo = categoriaFiltro === DB_CATEGORIAS[index];
               return (
-                <Card
-                  key={lugar.id}
-                  style={[styles.card, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}
-                  onPress={() => {
-                    router.push({
-                      pathname: "/detalle",
-                      params: { id: lugar.id },
-                    });
-                  }}
+                <TouchableOpacity
+                  key={index}
+                  style={[
+                    styles.catTile,
+                    isFiltroActivo && {
+                      borderColor: theme.colors.primary,
+                      backgroundColor: "#E4ECF7",
+                    },
+                  ]}
+                  onPress={() => handleCategoriaPress(index)}
                 >
+                  <Ionicons
+                    name={catIcons[index] as any}
+                    size={20}
+                    color={
+                      isFiltroActivo
+                        ? theme.colors.primary
+                        : theme.colors.textSecondary
+                    }
+                  />
+                  <Text
+                    style={[
+                      styles.catTileText,
+                      {
+                        color: isFiltroActivo
+                          ? theme.colors.primary
+                          : theme.colors.textSecondary,
+                      },
+                    ]}
+                  >
+                    {cat}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+
+          {/* Cabecera de resultados */}
+          <View style={styles.cercaTuyoHeader}>
+            <Text style={styles.sectionLabel}>{getTituloSeccion()}</Text>
+            {(categoriaFiltro || searchQuery.length > 0) && (
+              <TouchableOpacity
+                onPress={() => {
+                  setCategoriaFiltro(null);
+                  setSearchQuery("");
+                }}
+              >
+                <Text style={styles.clearFilter}>Limpiar</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+
+          {loading ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="small" color={theme.colors.primary} />
+              <Text style={styles.loadingText}>{t("inicio.cargando")}</Text>
+            </View>
+          ) : lugaresMostrados.length === 0 ? (
+            <View style={styles.loadingContainer}>
+              <Text style={styles.loadingText}>{t("inicio.sinResultados")}</Text>
+            </View>
+          ) : (
+            <View style={styles.listContainer}>
+              {lugaresMostrados.map((lugar) => {
+                const tipo = lugar.categoria;
+                const config = getVisualConfig(tipo, false);
+                const labelExhibido = getCategoryLabel(tipo, lang);
+                const badgeColors = getCategoryBadgeColors(tipo);
+                const fotoUrl = lugar.foto_actual_url || lugar.foto_antigua_url;
+
+                return (
+                  <Card
+                    key={lugar.id}
+                    style={[styles.card, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}
+                    onPress={() => {
+                      router.push({
+                        pathname: "/detalle",
+                        params: { id: lugar.id },
+                      });
+                    }}
+                  >
                   <View style={styles.photoContainer}>
                     {fotoUrl ? (
-                      <Image source={{ uri: fotoUrl }} style={styles.cardImage} resizeMode="cover" />
+                      <Image source={{ uri: fotoUrl }} style={styles.cardImage} contentFit="cover" transition={200} />
                     ) : (
                       <View style={[styles.placeholderPhoto, { backgroundColor: theme.colors.background }]}>
                         <Ionicons name={config.icon as any} size={32} color={theme.colors.textSecondary} />
@@ -404,6 +378,7 @@ export default function InicioScreen() {
         )}
         <View style={{ height: 24 }} />
       </ScrollView>
+      )}
 
       <BottomNavBar activeTab={0} />
     </SafeAreaView>

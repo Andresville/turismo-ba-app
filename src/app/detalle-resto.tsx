@@ -3,7 +3,6 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
-  Image,
   ScrollView,
   StyleSheet,
   TouchableOpacity,
@@ -12,84 +11,58 @@ import {
 import MapView, { Marker } from "react-native-maps";
 import { Text } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { Image } from "expo-image";
 
 import BottomNavBar from "../components/BottomNavBar";
 import { useItinerary } from "../context/ItineraryContext";
-import { useLang } from "../context/LangContext";
 import { supabase } from "../lib/supabase";
 import { useAppTheme } from "../theme/colors";
-
-const traducciones = {
-  es: {
-    resena: "Reseña especial",
-    direccion: "Dirección",
-    comoLlegar: "Cómo llegar",
-    guardar: "Guardar",
-    guardado: "Guardado",
-    cargando: "Cargando información...",
-    michelin: "Estrella Michelin",
-    bodegon: "Bodegón Histórico",
-    comuna: (c: number) => `Comuna ${c}`,
-  },
-  en: {
-    resena: "Special review",
-    direccion: "Address",
-    comoLlegar: "Directions",
-    guardar: "Save",
-    guardado: "Saved",
-    cargando: "Loading information...",
-    michelin: "Michelin Star",
-    bodegon: "Historic Tavern",
-    comuna: (c: number) => `Commune ${c}`,
-  },
-};
+import { useTranslation } from "../locales/i18n";
+import { Restaurante } from "../types/database";
+import { offlineCache, OFFLINE_KEYS } from "../lib/offline-cache";
 
 const FOTOS_RESTAURANTES: Record<string, any> = {
   "ac1c8282-8efd-45dd-a5e1-c7a3bd58c5b0": require("../../assets/images/don-julio.png"),
   "09fec52d-54ed-472b-bcb2-3615a9d9996f": require("../../assets/images/el-obrero.png"),
 };
 
-interface Restaurante {
-  id: string;
-  nombre: string;
-  reconocimiento: string;
-  comuna: number;
-  direccion: string;
-  resena_especial_es: string;
-  resena_especial_en: string;
-  lat: number;
-  lng: number;
-  foto_url?: string;
-}
-
 export default function DetalleRestoScreen() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
   const theme = useAppTheme();
-
-  const { lang: globalLang } = useLang();
-  const [localLang, setLocalLang] = useState(globalLang);
-  const t = traducciones[localLang as keyof typeof traducciones] || traducciones.es;
+  const { t, lang } = useTranslation();
 
   const { toggleItem, isSaved } = useItinerary();
   const saved = typeof id === "string" ? isSaved(id) : false;
 
   const [resto, setResto] = useState<Restaurante | null>(null);
   const [loading, setLoading] = useState(true);
+  const [localLang, setLocalLang] = useState(lang);
+
+  useEffect(() => {
+    setLocalLang(lang);
+  }, [lang]);
 
   useEffect(() => {
     const fetchDetalle = async () => {
       if (!id) return;
       setLoading(true);
       try {
-        const { data, error } = await supabase
-          .from("restaurantes")
-          .select("*")
-          .eq("id", id)
-          .single();
+        const { data: allRestos } = await offlineCache.get<Restaurante[]>(
+          OFFLINE_KEYS.RESTAURANTES,
+          async () => {
+            const { data: dbData, error } = await supabase
+              .from("restaurantes")
+              .select("*");
+            if (error) throw error;
+            return dbData || [];
+          }
+        );
 
-        if (error) throw error;
-        setResto(data as Restaurante);
+        const restoData = allRestos.find((r) => r.id === id);
+        if (restoData) {
+          setResto(restoData);
+        }
       } catch (error) {
         console.error("Error al cargar detalle del restaurante:", error);
       } finally {
@@ -118,7 +91,7 @@ export default function DetalleRestoScreen() {
       <SafeAreaView style={[styles.container, styles.centerAll, { backgroundColor: theme.colors.background }]}>
         <ActivityIndicator size="large" color={theme.colors.primary} />
         <Text style={{ marginTop: 12, color: theme.colors.textSecondary }}>
-          {traducciones[globalLang as keyof typeof traducciones].cargando}
+          {t("detalleResto.cargando")}
         </Text>
       </SafeAreaView>
     );
@@ -129,7 +102,7 @@ export default function DetalleRestoScreen() {
   const recColors = isMichelin
     ? { bg: "#FCE8E6", text: "#C9542A", border: "#F5B4AD" }
     : { bg: "#E6F4EA", text: "#3F6B4F", border: "#A3D8B6" };
-  const recLabel = isMichelin ? t.michelin : t.bodegon;
+  const recLabel = isMichelin ? t("restaurantes.michelin") : t("restaurantes.bodegon");
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
@@ -141,7 +114,7 @@ export default function DetalleRestoScreen() {
         hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
         accessible={true}
         accessibilityRole="button"
-        accessibilityLabel={globalLang === "es" ? "Volver a la pantalla anterior" : "Go back"}
+        accessibilityLabel={lang === "es" ? "Volver a la pantalla anterior" : "Go back"}
       >
         <Ionicons name="arrow-back" size={24} color="#1B2330" />
       </TouchableOpacity>
@@ -150,7 +123,7 @@ export default function DetalleRestoScreen() {
         {/* Imagen del Hero */}
         <View style={styles.heroPhoto}>
           {foto ? (
-            <Image source={foto} style={styles.heroImage} resizeMode="cover" />
+            <Image source={foto} style={styles.heroImage} contentFit="cover" transition={200} />
           ) : (
             <View style={[styles.heroImage, styles.centerAll, { backgroundColor: theme.colors.primary }]}>
               <Ionicons name="restaurant" size={64} color="#fff" />
@@ -164,7 +137,7 @@ export default function DetalleRestoScreen() {
             <View style={[styles.badge, { backgroundColor: recColors.bg, borderColor: recColors.border }]}>
               <Text style={[styles.badgeText, { color: recColors.text }]}>{recLabel}</Text>
             </View>
-            <Text style={styles.communeText}>{t.comuna(resto.comuna)}</Text>
+            <Text style={styles.communeText}>{t("restaurantes.comuna", { c: resto.comuna })}</Text>
           </View>
 
           <Text style={styles.titleText}>{resto.nombre}</Text>
@@ -204,7 +177,7 @@ export default function DetalleRestoScreen() {
         {/* Reseña Especial */}
         <View style={styles.descCard}>
           <View style={styles.descHeadRow}>
-            <Text style={styles.descLabel}>{t.resena}</Text>
+            <Text style={styles.descLabel}>{t("detalleResto.resena")}</Text>
             <View style={styles.togglePill}>
               <TouchableOpacity
                 style={[styles.toggleBtn, localLang === "es" && { backgroundColor: theme.colors.primary }]}
@@ -212,7 +185,7 @@ export default function DetalleRestoScreen() {
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                 accessible={true}
                 accessibilityRole="button"
-                accessibilityLabel={globalLang === 'es' ? 'Mostrar reseña en Español' : 'Show description in Spanish'}
+                accessibilityLabel={lang === 'es' ? 'Mostrar reseña en Español' : 'Show description in Spanish'}
               >
                 <Text style={[styles.toggleBtnText, localLang === "es" ? { color: "#fff" } : { color: theme.colors.textSecondary }]}>
                   ES
@@ -224,7 +197,7 @@ export default function DetalleRestoScreen() {
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                 accessible={true}
                 accessibilityRole="button"
-                accessibilityLabel={globalLang === 'es' ? 'Mostrar reseña en Inglés' : 'Show description in English'}
+                accessibilityLabel={lang === 'es' ? 'Mostrar reseña en Inglés' : 'Show description in English'}
               >
                 <Text style={[styles.toggleBtnText, localLang === "en" ? { color: "#fff" } : { color: theme.colors.textSecondary }]}>
                   EN
@@ -245,11 +218,11 @@ export default function DetalleRestoScreen() {
             onPress={openMaps}
             accessible={true}
             accessibilityRole="button"
-            accessibilityLabel={`${t.comoLlegar} a ${resto.nombre}`}
+            accessibilityLabel={`${t("detalleResto.comoLlegar")} a ${resto.nombre}`}
           >
             <Ionicons name="navigate" size={16} color="#fff" />
             <Text style={[styles.actionBtnText, { color: "#fff" }]}>
-              {t.comoLlegar}
+              {t("detalleResto.comoLlegar")}
             </Text>
           </TouchableOpacity>
 
@@ -266,7 +239,7 @@ export default function DetalleRestoScreen() {
             onPress={() => toggleItem(resto.id)}
             accessible={true}
             accessibilityRole="button"
-            accessibilityLabel={saved ? (globalLang === "es" ? "Quitar de Mi Recorrido" : "Remove from itinerary") : (globalLang === "es" ? "Guardar en Mi Recorrido" : "Save to itinerary")}
+            accessibilityLabel={saved ? (lang === "es" ? "Quitar de Mi Recorrido" : "Remove from itinerary") : (lang === "es" ? "Guardar en Mi Recorrido" : "Save to itinerary")}
           >
             <Ionicons
               name={saved ? "heart" : "heart-outline"}
@@ -274,7 +247,7 @@ export default function DetalleRestoScreen() {
               color={saved ? "#fff" : theme.colors.text}
             />
             <Text style={[styles.actionBtnText, { color: saved ? "#fff" : theme.colors.text }]}>
-              {saved ? t.guardado : t.guardar}
+              {saved ? t("detalleResto.guardado") : t("detalleResto.guardar")}
             </Text>
           </TouchableOpacity>
         </View>

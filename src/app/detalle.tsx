@@ -3,7 +3,6 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
-  Image,
   ScrollView,
   StyleSheet,
   TouchableOpacity,
@@ -12,82 +11,60 @@ import {
 import MapView, { Marker } from "react-native-maps";
 import { Text } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { Image } from "expo-image";
 
 import BottomNavBar from "../components/BottomNavBar";
 import { useItinerary } from "../context/ItineraryContext";
-import { useLang } from "../context/LangContext";
 import { supabase } from "../lib/supabase";
 import { useAppTheme, getCategoryIcon, getCategoryLabel } from "../theme/colors";
-
-const traducciones = {
-  es: {
-    fotoActual: "Actual",
-    fotoAntigua: "Antigua",
-    sinFoto: "Foto no disponible",
-    descripcion: "Descripción",
-    historia: "Reseña histórica",
-    comoLlegar: "Cómo llegar",
-    guardar: "Guardar",
-    guardado: "Guardado",
-    cercanos: "Lugares cercanos",
-    cargando: "Cargando información...",
-  },
-  en: {
-    fotoActual: "Current",
-    fotoAntigua: "Vintage",
-    sinFoto: "Photo unavailable",
-    descripcion: "Description",
-    historia: "Historical review",
-    comoLlegar: "Directions",
-    guardar: "Save",
-    guardado: "Saved",
-    cercanos: "Nearby places",
-    cargando: "Loading information...",
-  },
-};
-
-// El selector local getCategoryIcon ha sido reemplazado por la función centralizada en src/theme/colors.ts
+import { useTranslation } from "../locales/i18n";
+import { Lugar } from "../types/database";
+import { offlineCache, OFFLINE_KEYS } from "../lib/offline-cache";
 
 export default function DetalleScreen() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
   const theme = useAppTheme();
-
-  const { lang: globalLang } = useLang();
-  const [localLang, setLocalLang] = useState(globalLang);
-  const t = traducciones[localLang as keyof typeof traducciones];
+  const { t, lang } = useTranslation();
 
   // Integramos el contexto de Itinerario
   const { toggleItem, isSaved } = useItinerary();
   const saved = typeof id === "string" ? isSaved(id) : false;
 
-  const [lugar, setLugar] = useState<any>(null);
-  const [lugaresSugeridos, setLugaresSugeridos] = useState<any[]>([]);
+  const [lugar, setLugar] = useState<Lugar | null>(null);
+  const [lugaresSugeridos, setLugaresSugeridos] = useState<Lugar[]>([]);
   const [loading, setLoading] = useState(true);
   const [fotoVista, setFotoVista] = useState<"actual" | "antigua">("actual");
+  const [localLang, setLocalLang] = useState(lang);
+
+  useEffect(() => {
+    // Sincronizar localLang cuando cambie la global
+    setLocalLang(lang);
+  }, [lang]);
 
   useEffect(() => {
     const fetchDetalle = async () => {
       if (!id) return;
       setLoading(true);
       try {
-        const { data: lugarData, error: lugarError } = await supabase
-          .from("puntos_interes")
-          .select("*")
-          .eq("id", id)
-          .single();
-
-        if (lugarError) throw lugarError;
-        setLugar(lugarData);
-
+        const { data: allLugares } = await offlineCache.get<Lugar[]>(
+          OFFLINE_KEYS.PUNTOS_INTERES,
+          async () => {
+            const { data: dbData, error } = await supabase
+              .from("puntos_interes")
+              .select("*");
+            if (error) throw error;
+            return dbData || [];
+          }
+        );
+        
+        const lugarData = allLugares.find((l) => l.id === id);
         if (lugarData) {
-          const { data: sugeridosData } = await supabase
-            .from("puntos_interes")
-            .select("id, nombre, categoria")
-            .eq("comuna", lugarData.comuna)
-            .neq("id", id)
-            .limit(3);
-          setLugaresSugeridos(sugeridosData || []);
+          setLugar(lugarData);
+          const sugeridosData = allLugares
+            .filter((l) => l.comuna === lugarData.comuna && l.id !== id)
+            .slice(0, 3);
+          setLugaresSugeridos(sugeridosData);
         }
       } catch (error) {
         console.error("Error al cargar detalle:", error);
@@ -124,7 +101,7 @@ export default function DetalleScreen() {
       >
         <ActivityIndicator size="large" color={theme.colors.primary} />
         <Text style={{ marginTop: 12, color: theme.colors.textSecondary }}>
-          {traducciones[globalLang as keyof typeof traducciones].cargando}
+          {t("detalle.cargando")}
         </Text>
       </SafeAreaView>
     );
@@ -145,7 +122,7 @@ export default function DetalleScreen() {
         hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
         accessible={true}
         accessibilityRole="button"
-        accessibilityLabel={globalLang === "es" ? "Volver a la pantalla anterior" : "Go back"}
+        accessibilityLabel={lang === "es" ? "Volver a la pantalla anterior" : "Go back"}
       >
         <Ionicons name="arrow-back" size={24} color="#1B2330" />
       </TouchableOpacity>
@@ -161,7 +138,8 @@ export default function DetalleScreen() {
             <Image
               source={{ uri: fotoUrlAMostrar }}
               style={StyleSheet.absoluteFill}
-              resizeMode="cover"
+              contentFit="cover"
+              transition={200}
             />
           ) : (
             <View style={[StyleSheet.absoluteFill, styles.centerAll, { backgroundColor: theme.colors.primary }]}>
@@ -171,7 +149,7 @@ export default function DetalleScreen() {
           {tieneAmbasFotos && (
             <View style={styles.capLabel}>
               <Text style={styles.capText}>
-                {fotoVista === "actual" ? t.fotoActual : `${t.fotoAntigua}`}
+                {fotoVista === "actual" ? t("detalle.fotoActual") : `${t("detalle.fotoAntigua")}`}
               </Text>
             </View>
           )}
@@ -191,7 +169,7 @@ export default function DetalleScreen() {
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                 accessible={true}
                 accessibilityRole="button"
-                accessibilityLabel={globalLang === 'es' ? 'Mostrar foto actual' : 'Show current photo'}
+                accessibilityLabel={lang === 'es' ? 'Mostrar foto actual' : 'Show current photo'}
               >
                 <Text
                   style={[
@@ -201,7 +179,7 @@ export default function DetalleScreen() {
                       : { color: theme.colors.textSecondary },
                   ]}
                 >
-                  {t.fotoActual}
+                  {t("detalle.fotoActual")}
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity
@@ -215,7 +193,7 @@ export default function DetalleScreen() {
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                 accessible={true}
                 accessibilityRole="button"
-                accessibilityLabel={globalLang === 'es' ? 'Mostrar foto antigua' : 'Show historic photo'}
+                accessibilityLabel={lang === 'es' ? 'Mostrar foto antigua' : 'Show historic photo'}
               >
                 <Text
                   style={[
@@ -225,7 +203,7 @@ export default function DetalleScreen() {
                       : { color: theme.colors.textSecondary },
                   ]}
                 >
-                  {t.fotoAntigua}
+                  {t("detalle.fotoAntigua")}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -275,7 +253,7 @@ export default function DetalleScreen() {
 
         <View style={styles.descCard}>
           <View style={styles.descHeadRow}>
-            <Text style={styles.descLabel}>{t.descripcion}</Text>
+            <Text style={styles.descLabel}>{t("detalle.descripcion")}</Text>
             <View style={styles.togglePill}>
               <TouchableOpacity
                 style={[
@@ -288,7 +266,7 @@ export default function DetalleScreen() {
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                 accessible={true}
                 accessibilityRole="button"
-                accessibilityLabel={globalLang === 'es' ? 'Mostrar reseña en Español' : 'Show description in Spanish'}
+                accessibilityLabel={lang === 'es' ? 'Mostrar reseña en Español' : 'Show description in Spanish'}
               >
                 <Text
                   style={[
@@ -312,7 +290,7 @@ export default function DetalleScreen() {
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                 accessible={true}
                 accessibilityRole="button"
-                accessibilityLabel={globalLang === 'es' ? 'Mostrar reseña en Inglés' : 'Show description in English'}
+                accessibilityLabel={lang === 'es' ? 'Mostrar reseña en Inglés' : 'Show description in English'}
               >
                 <Text
                   style={[
@@ -333,7 +311,7 @@ export default function DetalleScreen() {
         </View>
 
         <View style={styles.descCard}>
-          <Text style={styles.descLabel}>{t.historia}</Text>
+          <Text style={styles.descLabel}>{t("detalle.historia")}</Text>
           <Text style={[styles.descBody, { marginTop: 8 }]}>
             {localLang === "es" ? lugar.historia_es : lugar.historia_en}
           </Text>
@@ -351,11 +329,11 @@ export default function DetalleScreen() {
             onPress={openMaps}
             accessible={true}
             accessibilityRole="button"
-            accessibilityLabel={`${t.comoLlegar} a ${lugar.nombre}`}
+            accessibilityLabel={`${t("detalle.comoLlegar")} a ${lugar.nombre}`}
           >
             <Ionicons name="navigate" size={16} color="#fff" />
             <Text style={[styles.actionBtnText, { color: "#fff" }]}>
-              {t.comoLlegar}
+              {t("detalle.comoLlegar")}
             </Text>
           </TouchableOpacity>
 
@@ -373,7 +351,7 @@ export default function DetalleScreen() {
             onPress={() => toggleItem(lugar.id)}
             accessible={true}
             accessibilityRole="button"
-            accessibilityLabel={saved ? (globalLang === "es" ? "Quitar de Mi Recorrido" : "Remove from itinerary") : (globalLang === "es" ? "Guardar en Mi Recorrido" : "Save to itinerary")}
+            accessibilityLabel={saved ? (lang === "es" ? "Quitar de Mi Recorrido" : "Remove from itinerary") : (lang === "es" ? "Guardar en Mi Recorrido" : "Save to itinerary")}
           >
             <Ionicons
               name={saved ? "heart" : "heart-outline"}
@@ -386,14 +364,14 @@ export default function DetalleScreen() {
                 { color: saved ? "#fff" : theme.colors.text },
               ]}
             >
-              {saved ? t.guardado : t.guardar}
+              {saved ? t("detalle.guardado") : t("detalle.guardar")}
             </Text>
           </TouchableOpacity>
         </View>
 
         {lugaresSugeridos.length > 0 && (
           <>
-            <Text style={styles.sectionLabel}>{t.cercanos}</Text>
+            <Text style={styles.sectionLabel}>{t("detalle.cercanos")}</Text>
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}

@@ -18,89 +18,54 @@ import { Card, Text } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import BottomNavBar from "../components/BottomNavBar";
-import { useLang } from "../context/LangContext";
 import { supabase } from "../lib/supabase";
 import { useAppTheme } from "../theme/colors";
+import { useTranslation } from "../locales/i18n";
+import { Alojamiento } from "../types/database";
+import { offlineCache, OFFLINE_KEYS } from "../lib/offline-cache";
+import { OfflineBanner, ErrorState } from "../components/connection-status";
 
 if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
 
-export interface Alojamiento {
-  id: string;
-  nombre: string;
-  tipo_es: string;
-  tipo_en: string;
-  barrio: string;
-  comuna: number;
-  direccion: string;
-  precio: string;
-  estrellas?: number;
-  lat: number;
-  lng: number;
-  descripcion_es: string;
-  descripcion_en: string;
-  telefono: string;
-  sitio_web: string;
-}
-
-const traducciones = {
-  es: {
-    titulo: "Alojamientos",
-    subtitulo: "Hoteles y hospedajes recomendados",
-    filtroTodos: "Todos",
-    filtroLujo: "Lujo",
-    filtroBoutique: "Boutique",
-    filtroHostel: "Hostel",
-    comoLlegar: "Cómo llegar",
-    llamar: "Llamar",
-    sitioWeb: "Sitio Web",
-    estrellas: "estrellas",
-    precio: "Precio:",
-    cargando: "Buscando alojamientos...",
-  },
-  en: {
-    titulo: "Lodgings",
-    subtitulo: "Recommended hotels and accommodations",
-    filtroTodos: "All",
-    filtroLujo: "Luxury",
-    filtroBoutique: "Boutique",
-    filtroHostel: "Hostel",
-    comoLlegar: "Directions",
-    llamar: "Call",
-    sitioWeb: "Website",
-    estrellas: "stars",
-    precio: "Price:",
-    cargando: "Finding lodgings...",
-  },
-};
-
 export default function AlojamientosScreen() {
   const theme = useAppTheme();
-  const { lang } = useLang();
-  const t = traducciones[lang as keyof typeof traducciones] || traducciones.es;
+  const { t, lang } = useTranslation();
   const router = useRouter();
 
   const [alojamientos, setAlojamientos] = useState<Alojamiento[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isOffline, setIsOffline] = useState(false);
+  const [errorLoading, setErrorLoading] = useState(false);
   const [filtroActivo, setFiltroActivo] = useState<"todos" | "lujo" | "boutique" | "hostel">("todos");
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
+  const fetchAlojamientos = async () => {
+    setLoading(true);
+    setErrorLoading(false);
+    try {
+      const { data, isOffline: offline } = await offlineCache.get<Alojamiento[]>(
+        OFFLINE_KEYS.ALOJAMIENTOS,
+        async () => {
+          const { data: dbData, error } = await supabase
+            .from("alojamientos")
+            .select("*");
+          if (error) throw error;
+          return dbData || [];
+        }
+      );
+      setAlojamientos(data);
+      setIsOffline(offline);
+    } catch (error) {
+      console.error("Error al cargar alojamientos:", error);
+      setErrorLoading(true);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchAlojamientos = async () => {
-      setLoading(true);
-      try {
-        const { data, error } = await supabase
-          .from("alojamientos")
-          .select("*");
-        if (error) throw error;
-        setAlojamientos((data as Alojamiento[]) || []);
-      } catch (error) {
-        console.error("Error al cargar alojamientos:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchAlojamientos();
   }, []);
 
@@ -160,66 +125,71 @@ export default function AlojamientosScreen() {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
+      <OfflineBanner isOffline={isOffline} />
       {/* Cabecera superior tipo "Chapa" */}
       <View style={[styles.chapaBar, { backgroundColor: theme.colors.primary }]}>
         <View>
-          <Text style={styles.chapaTitle}>{t.titulo}</Text>
-          <Text style={styles.chapaSub}>{t.subtitulo}</Text>
+          <Text style={styles.chapaTitle}>{t("alojamientos.titulo")}</Text>
+          <Text style={styles.chapaSub}>{t("alojamientos.subtitulo")}</Text>
         </View>
       </View>
 
-      {/* Chips de filtro */}
-      <View style={styles.filterRow}>
-        {(["todos", "lujo", "boutique", "hostel"] as const).map((filtro) => {
-          const isSelected = filtroActivo === filtro;
-          const label =
-            filtro === "todos"
-              ? t.filtroTodos
-              : filtro === "lujo"
-              ? t.filtroLujo
-              : filtro === "boutique"
-              ? t.filtroBoutique
-              : t.filtroHostel;
+      {errorLoading ? (
+        <ErrorState onRetry={fetchAlojamientos} />
+      ) : (
+        <>
+          {/* Chips de filtro */}
+          <View style={styles.filterRow}>
+            {(["todos", "lujo", "boutique", "hostel"] as const).map((filtro) => {
+              const isSelected = filtroActivo === filtro;
+              const label =
+                filtro === "todos"
+                  ? t("alojamientos.filtroTodos")
+                  : filtro === "lujo"
+                  ? t("alojamientos.filtroLujo")
+                  : filtro === "boutique"
+                  ? t("alojamientos.filtroBoutique")
+                  : t("alojamientos.filtroHostel");
 
-          return (
-            <TouchableOpacity
-              key={filtro}
-              style={[
-                styles.filterChip,
-                { borderColor: theme.colors.border },
-                isSelected && { backgroundColor: theme.colors.primary, borderColor: theme.colors.primary },
-              ]}
-              onPress={() => {
-                LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-                setFiltroActivo(filtro);
-                setExpandedId(null);
-              }}
-              activeOpacity={0.8}
-              accessible={true}
-              accessibilityRole="button"
-              accessibilityLabel={`${label}. ${isSelected ? (lang === 'es' ? 'Seleccionado' : 'Selected') : ''}`}
-            >
-              <Text
-                style={[
-                  styles.filterChipText,
-                  { color: isSelected ? "#fff" : theme.colors.textSecondary },
-                ]}
-              >
-                {label}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
-      </View>
-
-      {/* Scroll de Alojamientos */}
-      <ScrollView style={styles.scrollArea} showsVerticalScrollIndicator={false}>
-        {loading ? (
-          <View style={{ padding: 60, alignItems: "center" }}>
-            <ActivityIndicator size="large" color={theme.colors.primary} />
-            <Text style={{ marginTop: 12, color: theme.colors.textSecondary, fontSize: 13 }}>{t.cargando}</Text>
+              return (
+                <TouchableOpacity
+                  key={filtro}
+                  style={[
+                    styles.filterChip,
+                    { borderColor: theme.colors.border },
+                    isSelected && { backgroundColor: theme.colors.primary, borderColor: theme.colors.primary },
+                  ]}
+                  onPress={() => {
+                    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+                    setFiltroActivo(filtro);
+                    setExpandedId(null);
+                  }}
+                  activeOpacity={0.8}
+                  accessible={true}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${label}. ${isSelected ? (lang === 'es' ? 'Seleccionado' : 'Selected') : ''}`}
+                >
+                  <Text
+                    style={[
+                      styles.filterChipText,
+                      { color: isSelected ? "#fff" : theme.colors.textSecondary },
+                    ]}
+                  >
+                    {label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
           </View>
-        ) : (
+
+          {/* Scroll de Alojamientos */}
+          <ScrollView style={styles.scrollArea} showsVerticalScrollIndicator={false}>
+            {loading ? (
+              <View style={{ padding: 60, alignItems: "center" }}>
+                <ActivityIndicator size="large" color={theme.colors.primary} />
+                <Text style={{ marginTop: 12, color: theme.colors.textSecondary, fontSize: 13 }}>{t("alojamientos.cargando")}</Text>
+              </View>
+            ) : (
           alojamientosFiltrados.map((item) => {
           const isExpanded = expandedId === item.id;
           const icon = getAlojamientoIcon(item.tipo_en);
@@ -274,34 +244,34 @@ export default function AlojamientosScreen() {
                       activeOpacity={0.8}
                       accessible={true}
                       accessibilityRole="button"
-                      accessibilityLabel={`${t.comoLlegar} a ${item.nombre}`}
+                      accessibilityLabel={`${t("alojamientos.comoLlegar")} a ${item.nombre}`}
                     >
                       <Ionicons name="navigate" size={14} color="#fff" />
-                      <Text style={styles.btnText}>{t.comoLlegar}</Text>
+                      <Text style={styles.btnText}>{t("alojamientos.comoLlegar")}</Text>
                     </TouchableOpacity>
-
+ 
                     <TouchableOpacity
                       style={[styles.btnOutline, { borderColor: theme.colors.primary }]}
                       onPress={() => handleCallPress(item.telefono, item.nombre)}
                       activeOpacity={0.8}
                       accessible={true}
                       accessibilityRole="button"
-                      accessibilityLabel={`${t.llamar} a ${item.nombre}`}
+                      accessibilityLabel={`${t("alojamientos.llamar")} a ${item.nombre}`}
                     >
                       <Ionicons name="call-outline" size={14} color={theme.colors.primary} />
-                      <Text style={[styles.btnOutlineText, { color: theme.colors.primary }]}>{t.llamar}</Text>
+                      <Text style={[styles.btnOutlineText, { color: theme.colors.primary }]}>{t("alojamientos.llamar")}</Text>
                     </TouchableOpacity>
-
+ 
                     <TouchableOpacity
                       style={[styles.btnOutline, { borderColor: theme.colors.primary }]}
                       onPress={() => handleWebPress(item.sitio_web)}
                       activeOpacity={0.8}
                       accessible={true}
                       accessibilityRole="button"
-                      accessibilityLabel={`${t.sitioWeb} de ${item.nombre}`}
+                      accessibilityLabel={`${t("alojamientos.sitioWeb")} de ${item.nombre}`}
                     >
                       <Ionicons name="globe-outline" size={14} color={theme.colors.primary} />
-                      <Text style={[styles.btnOutlineText, { color: theme.colors.primary }]}>{t.sitioWeb}</Text>
+                      <Text style={[styles.btnOutlineText, { color: theme.colors.primary }]}>{t("alojamientos.sitioWeb")}</Text>
                     </TouchableOpacity>
                   </View>
                 </View>
@@ -310,7 +280,9 @@ export default function AlojamientosScreen() {
           );
         }))}
         <View style={{ height: 24 }} />
-      </ScrollView>
+          </ScrollView>
+        </>
+      )}
 
       {/* Pie de navegación */}
       <BottomNavBar activeTab={2} />

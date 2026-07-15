@@ -14,63 +14,13 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import BottomNavBar from "../components/BottomNavBar";
 import { useItinerary } from "../context/ItineraryContext";
-import { useLang } from "../context/LangContext";
 import { useLocation } from "../context/LocationContext";
 import { supabase } from "../lib/supabase";
 import { getCategoryColor, getCategoryIcon, getCategoryLabel, useAppTheme } from "../theme/colors";
-
-const traducciones = {
-  es: {
-    titulo: "Mapa de la ciudad",
-    subtitulo: "puntos de interés",
-    rutaHacia: "Ruta a",
-    itinerarioActivo: "Circuito de tu recorrido",
-    comunas: [
-      "Todas las comunas",
-      "Comuna 1 (Centro/San Telmo)",
-      "Comuna 2 (Recoleta)",
-      "Comuna 3 (Balvanera/Abasto)",
-      "Comuna 4 (La Boca/Barracas)",
-      "Comuna 5 (Almagro/Boedo)",
-      "Comuna 6 (Caballito)",
-      "Comuna 7 (Flores)",
-      "Comuna 8 (Lugano)",
-      "Comuna 9 (Mataderos/Liniers)",
-      "Comuna 10 (Villa Luro)",
-      "Comuna 11 (Devoto)",
-      "Comuna 12 (Saavedra)",
-      "Comuna 13 (Belgrano/Núñez)",
-      "Comuna 14 (Palermo)",
-      "Comuna 15 (Villa Crespo/Chacarita)",
-    ],
-    cargando: "Cargando mapa...",
-  },
-  en: {
-    titulo: "City Map",
-    subtitulo: "points of interest",
-    rutaHacia: "Route to",
-    itinerarioActivo: "Your custom tour route",
-    comunas: [
-      "All communes",
-      "Commune 1 (Downtown)",
-      "Commune 2 (Recoleta)",
-      "Commune 3 (Balvanera)",
-      "Commune 4 (La Boca)",
-      "Commune 5 (Almagro)",
-      "Commune 6 (Caballito)",
-      "Commune 7 (Flores)",
-      "Commune 8 (Lugano)",
-      "Commune 9 (Mataderos)",
-      "Commune 10 (Villa Luro)",
-      "Commune 11 (Devoto)",
-      "Commune 12 (Saavedra)",
-      "Commune 13 (Belgrano)",
-      "Commune 14 (Palermo)",
-      "Commune 15 (Villa Crespo)",
-    ],
-    cargando: "Loading map...",
-  },
-};
+import { useTranslation } from "../locales/i18n";
+import { Lugar } from "../types/database";
+import { offlineCache, OFFLINE_KEYS } from "../lib/offline-cache";
+import { OfflineBanner, ErrorState } from "../components/connection-status";
 
 const getDistanceSquared = (lat1: number, lon1: number, lat2: number, lon2: number) => {
   const dLat = lat2 - lat1;
@@ -105,12 +55,9 @@ const ordenarPorCercania = (puntos: any[], startLat: number, startLng: number): 
   return result;
 };
 
-// Los métodos auxiliares locales getMarkerColor y getMarkerIcon han sido reemplazados por los centralizados en src/theme/colors.ts
-
 export default function MapaScreen() {
   const theme = useAppTheme();
-  const { lang } = useLang();
-  const t = traducciones[lang as keyof typeof traducciones] || traducciones.es;
+  const { t, lang } = useTranslation();
   const router = useRouter();
 
   const { destinoLat, destinoLng, destinoNombre, mostrarItinerario } = useLocalSearchParams();
@@ -120,6 +67,8 @@ export default function MapaScreen() {
   const [comunaActiva, setComunaActiva] = useState(0);
   const [lugares, setLugares] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isOffline, setIsOffline] = useState(false);
+  const [errorLoading, setErrorLoading] = useState(false);
 
   // Estados para el "Modo Ruta" peatonal
   const [destinoActivo, setDestinoActivo] = useState<{
@@ -177,36 +126,51 @@ export default function MapaScreen() {
     fetchRuta();
   }, [location, destinoActivo]);
 
+  const fetchMapa = async () => {
+    setLoading(true);
+    setErrorLoading(false);
+    try {
+      const [puntosRes, restosRes] = await Promise.all([
+        offlineCache.get<Lugar[]>(
+          OFFLINE_KEYS.PUNTOS_INTERES,
+          async () => {
+            const { data, error } = await supabase
+              .from("puntos_interes")
+              .select("*");
+            if (error) throw error;
+            return data || [];
+          }
+        ),
+        offlineCache.get<any[]>(
+          OFFLINE_KEYS.RESTAURANTES,
+          async () => {
+            const { data, error } = await supabase
+              .from("restaurantes")
+              .select("*");
+            if (error) throw error;
+            return data || [];
+          }
+        )
+      ]);
+
+      const puntos = puntosRes.data || [];
+      const restos = (restosRes.data || []).map((r) => ({
+        ...r,
+        categoria: "Restaurantes",
+      }));
+
+      setLugares([...puntos, ...restos]);
+      setIsOffline(puntosRes.isOffline || restosRes.isOffline);
+    } catch (error) {
+      console.error("Error al cargar mapa:", error);
+      setErrorLoading(true);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // 3. Cargar todos los puntos de interés y restaurantes de Supabase
   useEffect(() => {
-    const fetchMapa = async () => {
-      setLoading(true);
-      try {
-        const [puntosRes, restosRes] = await Promise.all([
-          supabase
-            .from("puntos_interes")
-            .select("id, nombre, categoria, comuna, lat, lng"),
-          supabase
-            .from("restaurantes")
-            .select("id, nombre, comuna, lat, lng")
-        ]);
-
-        if (puntosRes.error) throw puntosRes.error;
-        if (restosRes.error) throw restosRes.error;
-
-        const puntos = puntosRes.data || [];
-        const restos = (restosRes.data || []).map((r) => ({
-          ...r,
-          categoria: "Restaurantes",
-        }));
-
-        setLugares([...puntos, ...restos]);
-      } catch (error) {
-        console.error("Error al cargar mapa:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchMapa();
   }, []);
 
@@ -301,68 +265,72 @@ export default function MapaScreen() {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
+      <OfflineBanner isOffline={isOffline} />
       {/* Barra de cabecera "Chapa" */}
       <View style={[styles.chapaBar, { backgroundColor: theme.colors.primary }]}>
         <View style={{ flex: 1 }}>
-          <Text style={styles.chapaTitle}>{t.titulo}</Text>
+          <Text style={styles.chapaTitle}>{t("mapa.titulo")}</Text>
           <Text style={styles.chapaSub} numberOfLines={1}>
             {destinoActivo
-              ? `🚶 ${t.rutaHacia} ${destinoActivo.nombre}`
+              ? `🚶 ${t("mapa.rutaHacia")} ${destinoActivo.nombre}`
               : esItinerarioActivo
-                ? `⭐ ${t.itinerarioActivo} (${lugaresMostrados.length})`
-                : `${lugaresMostrados.length} ${t.subtitulo}`}
+                ? `⭐ ${t("mapa.itinerarioActivo")} (${lugaresMostrados.length})`
+                : `${lugaresMostrados.length} ${t("mapa.subtitulo")}`}
           </Text>
         </View>
       </View>
 
-      <View style={styles.content}>
-        {/* Scroll Horizontal de Comunas (se oculta en Modo Itinerario o Modo Ruta) */}
-        {!destinoActivo && !esItinerarioActivo && (
-          <View style={styles.chipContainer}>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.chipScroll}
-            >
-              {t.comunas.map((comunaLabel, index) => {
-                const isSelected = comunaActiva === index;
-                return (
-                  <TouchableOpacity
-                    key={index}
-                    style={[
-                      styles.chip,
-                      { borderColor: theme.colors.border },
-                      isSelected && {
-                        backgroundColor: theme.colors.primary,
-                        borderColor: theme.colors.primary,
-                      },
-                    ]}
-                    onPress={() => setComunaActiva(index)}
-                    activeOpacity={0.7}
-                  >
-                    <Text
+      {errorLoading ? (
+        <ErrorState onRetry={fetchMapa} />
+      ) : (
+        <View style={styles.content}>
+          {/* Scroll Horizontal de Comunas (se oculta en Modo Itinerario o Modo Ruta) */}
+          {!destinoActivo && !esItinerarioActivo && (
+            <View style={styles.chipContainer}>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.chipScroll}
+              >
+                {(t("mapa.comunas") as string[]).map((comunaLabel, index) => {
+                  const isSelected = comunaActiva === index;
+                  return (
+                    <TouchableOpacity
+                      key={index}
                       style={[
-                        styles.chipText,
-                        { color: isSelected ? "#fff" : theme.colors.textSecondary },
+                        styles.chip,
+                        { borderColor: theme.colors.border },
+                        isSelected && {
+                          backgroundColor: theme.colors.primary,
+                          borderColor: theme.colors.primary,
+                        },
                       ]}
+                      onPress={() => setComunaActiva(index)}
+                      activeOpacity={0.7}
                     >
-                      {comunaLabel}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </ScrollView>
-          </View>
-        )}
-
-        {/* Contenedor del Mapa */}
-        <View style={[styles.mapContainer, { borderColor: theme.colors.border }]}>
-          {loading ? (
-            <View style={styles.loadingWrapper}>
-              <ActivityIndicator size="large" color={theme.colors.primary} />
-              <Text style={{ marginTop: 10, color: theme.colors.textSecondary }}>{t.cargando}</Text>
+                      <Text
+                        style={[
+                          styles.chipText,
+                          { color: isSelected ? "#fff" : theme.colors.textSecondary },
+                        ]}
+                      >
+                        {comunaLabel}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
             </View>
-          ) : (
+          )}
+
+          {/* Contenedor del Mapa */}
+          <View style={[styles.mapContainer, { borderColor: theme.colors.border }]}>
+            {loading ? (
+              <View style={styles.loadingWrapper}>
+                <ActivityIndicator size="large" color={theme.colors.primary} />
+                <Text style={{ marginTop: 10, color: theme.colors.textSecondary }}>{t("mapa.cargando")}</Text>
+              </View>
+            ) : (
             <MapView
               style={styles.map}
               provider={PROVIDER_GOOGLE}
@@ -447,7 +415,8 @@ export default function MapaScreen() {
             </View>
           ))}
         </View>
-      </View>
+        </View>
+      )}
 
       {/* Pie de navegación */}
       <BottomNavBar activeTab={1} />

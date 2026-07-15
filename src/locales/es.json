@@ -1,0 +1,116 @@
+{
+  "inicio": {
+    "ciudad": "Buenos Aires",
+    "ubicacionPrefix": "estás en",
+    "ubicacionDefault": "Buscando ubicación...",
+    "buscar": "Buscar lugar, comuna o zona…",
+    "tabTuristico": "Turístico",
+    "tabResto": "Restaurantes",
+    "catTitulo": "Categorías",
+    "categorias": [
+      "Museos",
+      "Parques",
+      "Cúpulas",
+      "Edificios",
+      "Teatros",
+      "Estadios",
+      "Zonas turísticas",
+      "Mi recorrido"
+    ],
+    "cercaTitulo": "Cerca tuyo",
+    "resultadosBusqueda": "Resultados de búsqueda",
+    "cargando": "Buscando lugares...",
+    "sinResultados": "No se encontraron lugares.",
+    "nav": ["Inicio", "Mapa", "Transporte", "Resto", "Recorrido"]
+  },
+  "mapa": {
+    "titulo": "Mapa de la ciudad",
+    "subtitulo": "puntos de interés",
+    "rutaHacia": "Ruta a",
+    "itinerarioActivo": "Circuito de tu recorrido",
+    "cargando": "Cargando mapa...",
+    "verDetalle": "Ver detalle →",
+    "comunas": [
+      "Todas las comunas",
+      "Comuna 1 (Centro/San Telmo)",
+      "Comuna 2 (Recoleta)",
+      "Comuna 3 (Balvanera/Abasto)",
+      "Comuna 4 (La Boca/Barracas)",
+      "Comuna 5 (Almagro/Boedo)",
+      "Comuna 6 (Caballito)",
+      "Comuna 7 (Flores)",
+      "Comuna 8 (Lugano)",
+      "Comuna 9 (Mataderos/Liniers)",
+      "Comuna 10 (Villa Luro)",
+      "Comuna 11 (Devoto)",
+      "Comuna 12 (Saavedra)",
+      "Comuna 13 (Belgrano/Núñez)",
+      "Comuna 14 (Palermo)",
+      "Comuna 15 (Villa Crespo/Chacarita)"
+    ]
+  },
+  "recorrido": {
+    "titulo": "Mi Recorrido",
+    "subtitulo": "Tu pasaporte de viaje por Buenos Aires",
+    "vacioTitulo": "Tu pasaporte está vacío",
+    "vacioDesc": "Explorá los puntos de interés de la ciudad y guardalos con el corazón ❤️ para armar tu circuito personalizado.",
+    "btnExplorar": "Buscar lugares",
+    "progreso": "Progreso del recorrido",
+    "verMapa": "Ver circuito en el mapa",
+    "visitado": "VISITADO",
+    "selloFecha": "BA EXPRESS",
+    "comuna": "Comuna {c}",
+    "cargando": "Cargando itinerario..."
+  },
+  "restaurantes": {
+    "titulo": "Restaurantes",
+    "subtitulo": "Gastronomía recomendada de la ciudad",
+    "cargando": "Buscando restaurantes...",
+    "sinDatos": "No hay restaurantes disponibles.",
+    "michelin": "Estrella Michelin",
+    "bodegon": "Bodegón Histórico",
+    "comuna": "Comuna {c}"
+  },
+  "alojamientos": {
+    "titulo": "Alojamientos",
+    "subtitulo": "Hoteles y hospedajes recomendados",
+    "filtroTodos": "Todos",
+    "filtroLujo": "Lujo",
+    "filtroBoutique": "Boutique",
+    "filtroHostel": "Hostel",
+    "comoLlegar": "Cómo llegar",
+    "llamar": "Llamar",
+    "sitioWeb": "Sitio Web",
+    "estrellas": "estrellas",
+    "precio": "Precio:",
+    "cargando": "Buscando alojamientos..."
+  },
+  "detalle": {
+    "fotoActual": "Actual",
+    "fotoAntigua": "Antigua",
+    "sinFoto": "Foto no disponible",
+    "descripcion": "Descripción",
+    "historia": "Reseña histórica",
+    "comoLlegar": "Cómo llegar",
+    "guardar": "Guardar",
+    "guardado": "Guardado",
+    "cercanos": "Lugares cercanos",
+    "cargando": "Cargando información..."
+  },
+  "detalleResto": {
+    "resena": "Reseña especial",
+    "direccion": "Dirección",
+    "comoLlegar": "Cómo llegar",
+    "guardar": "Guardar",
+    "guardado": "Guardado",
+    "cargando": "Cargando información...",
+    "michelin": "Estrella Michelin",
+    "bodegon": "Bodegón Histórico",
+    "comuna": "Comuna {c}"
+  },
+  "common": {
+    "noInternet": "Sin conexión a internet",
+    "reintentar": "Reintentar",
+    "datosGuardados": "Usando datos guardados (sin conexión)"
+  }
+}
