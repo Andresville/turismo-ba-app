@@ -3,6 +3,7 @@
     "name": "TurismoBA",
     "slug": "TurismoBA",
     "version": "1.0.0",
+    "owner": "veco2804",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "turismoba",
