@@ -342,7 +342,7 @@ export default function MapaScreen() {
             ) : (
             <MapView
               style={styles.map}
-              provider={PROVIDER_GOOGLE}
+              provider={Platform.OS === 'ios' ? PROVIDER_GOOGLE : undefined}
               initialRegion={regionInicial}
               showsUserLocation={true}
             >

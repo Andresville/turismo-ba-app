@@ -9,7 +9,7 @@
     "scheme": "turismoba",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "icon": "./assets/expo.icon",
+      "icon": "./assets/images/icon.png",
       "bundleIdentifier": "com.andresville.turismoba",
       "buildNumber": "1",
       "infoPlist": {
@@ -18,7 +18,6 @@
     },
     "android": {
       "package": "com.andresville.turismoba",
-      "versionCode": 1,
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",

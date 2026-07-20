@@ -1,0 +1,5 @@
+# Exclude heavy folders from EAS Build upload
+Fotos*
+.git/
+.claude/
+.vscode/
