@@ -8,6 +8,7 @@
     "icon": "./assets/images/icon.png",
     "scheme": "turismoba",
     "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
     "ios": {
       "icon": "./assets/images/icon.png",
       "bundleIdentifier": "com.andresville.turismoba",
