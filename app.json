@@ -46,8 +46,13 @@
       "expo-font"
     ],
     "experiments": {
-      "typedRoutes": true,
-      "reactCompiler": true
+      "typedRoutes": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "3eaab0ee-6d55-47ff-a27b-79088cdfb61d"
+      }
     }
   }
 }
