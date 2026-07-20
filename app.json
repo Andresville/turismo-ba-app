@@ -12,9 +12,9 @@
     "ios": {
       "icon": "./assets/images/icon.png",
       "bundleIdentifier": "com.andresville.turismoba",
-      "buildNumber": "1",
       "infoPlist": {
-        "NSLocationWhenInUseUsageDescription": "Turismo BA utiliza tu ubicación para mostrarte los puntos turísticos y restaurantes más cercanos en el mapa y calcular tu circuito peatonal."
+        "NSLocationWhenInUseUsageDescription": "Turismo BA utiliza tu ubicación para mostrarte los puntos turísticos y restaurantes más cercanos en el mapa y calcular tu circuito peatonal.",
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
