@@ -10,7 +10,7 @@ import {
 } from "react-native";
 import MapView, { Marker } from "react-native-maps";
 import { Text } from "react-native-paper";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { Image } from "expo-image";
 
 import BottomNavBar from "../components/BottomNavBar";
@@ -26,6 +26,7 @@ export default function DetalleScreen() {
   const router = useRouter();
   const theme = useAppTheme();
   const { t, lang } = useTranslation();
+  const insets = useSafeAreaInsets();
 
   // Integramos el contexto de Itinerario
   const { toggleItem, isSaved } = useItinerary();
@@ -116,7 +117,7 @@ export default function DetalleScreen() {
       style={[styles.container, { backgroundColor: theme.colors.background }]}
     >
       <TouchableOpacity
-        style={styles.backBtn}
+        style={[styles.backBtn, { top: Math.max(insets.top, 16) + 8 }]}
         onPress={() => router.back()}
         activeOpacity={0.8}
         hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
@@ -428,7 +429,6 @@ const styles = StyleSheet.create({
   centerAll: { justifyContent: "center", alignItems: "center" },
   backBtn: {
     position: "absolute",
-    top: 16,
     left: 16,
     zIndex: 10,
     backgroundColor: "rgba(255,255,255,0.9)",

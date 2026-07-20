@@ -10,7 +10,7 @@ import {
 } from "react-native";
 import MapView, { Marker } from "react-native-maps";
 import { Text } from "react-native-paper";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { Image } from "expo-image";
 
 import BottomNavBar from "../components/BottomNavBar";
@@ -31,6 +31,7 @@ export default function DetalleRestoScreen() {
   const router = useRouter();
   const theme = useAppTheme();
   const { t, lang } = useTranslation();
+  const insets = useSafeAreaInsets();
 
   const { toggleItem, isSaved } = useItinerary();
   const saved = typeof id === "string" ? isSaved(id) : false;
@@ -108,7 +109,7 @@ export default function DetalleRestoScreen() {
     <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
       {/* Botón de volver atrás flotante */}
       <TouchableOpacity
-        style={styles.backBtn}
+        style={[styles.backBtn, { top: Math.max(insets.top, 16) + 8 }]}
         onPress={() => router.back()}
         activeOpacity={0.8}
         hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
@@ -269,7 +270,6 @@ const styles = StyleSheet.create({
   },
   backBtn: {
     position: "absolute",
-    top: 16,
     left: 16,
     zIndex: 10,
     backgroundColor: "rgba(255,255,255,0.9)",

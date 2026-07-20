@@ -5,10 +5,11 @@ import {
   ActivityIndicator,
   ScrollView,
   StyleSheet,
+  Text as RNText,
   TouchableOpacity,
   View
 } from "react-native";
-import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from "react-native-maps";
+import MapView, { Marker, Callout, Polyline, PROVIDER_GOOGLE } from "react-native-maps";
 import { Text } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -63,6 +64,14 @@ export default function MapaScreen() {
   const { destinoLat, destinoLng, destinoNombre, mostrarItinerario } = useLocalSearchParams();
   const { location } = useLocation();
   const { savedItems } = useItinerary();
+
+  const handleNavigateToDetail = (lugar: any) => {
+    if (!lugar || !lugar.id) return;
+    router.push({
+      pathname: lugar.categoria === "Restaurantes" ? "/detalle-resto" as any : "/detalle" as any,
+      params: { id: lugar.id },
+    });
+  };
 
   const [comunaActiva, setComunaActiva] = useState(0);
   const [lugares, setLugares] = useState<any[]>([]);
@@ -349,14 +358,7 @@ export default function MapaScreen() {
                     coordinate={{ latitude: lugar.lat, longitude: lugar.lng }}
                     title={lugar.nombre}
                     description={lang === "es" ? "Ver detalle →" : "View details →"}
-                    onCalloutPress={() => {
-                      setTimeout(() => {
-                        router.push({
-                          pathname: lugar.categoria === "Restaurantes" ? "/detalle-resto" as any : "/detalle" as any,
-                          params: { id: lugar.id },
-                        });
-                      }, 100);
-                    }}
+                    onCalloutPress={() => handleNavigateToDetail(lugar)}
                   >
                     {/* Contenedor transparente más grande para ampliar el hit target táctil */}
                     <View style={styles.markerHitTarget} pointerEvents="none">
@@ -495,7 +497,7 @@ const styles = StyleSheet.create({
   },
   calloutTooltip: {
     width: 170,
-    height: 60,
+    minHeight: 56,
     backgroundColor: "#FBF9F2", // marfil-card
     borderRadius: 8,
     borderWidth: 1,
@@ -503,17 +505,22 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     paddingHorizontal: 8,
+    paddingVertical: 6,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.15,
     shadowRadius: 3,
     elevation: 4,
   },
-  calloutInner: {
+  calloutNativeContainer: {
+    minWidth: 160,
+    maxWidth: 220,
+    padding: 4,
+  },
+  calloutNativeContent: {
     width: "100%",
-    height: "100%",
-    justifyContent: "center",
     alignItems: "center",
+    justifyContent: "center",
   },
   calloutTitle: {
     fontSize: 13,
