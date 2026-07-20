@@ -8,9 +8,16 @@
     "scheme": "turismoba",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "icon": "./assets/expo.icon"
+      "icon": "./assets/expo.icon",
+      "bundleIdentifier": "com.andresville.turismoba",
+      "buildNumber": "1",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "Turismo BA utiliza tu ubicación para mostrarte los puntos turísticos y restaurantes más cercanos en el mapa y calcular tu circuito peatonal."
+      }
     },
     "android": {
+      "package": "com.andresville.turismoba",
+      "versionCode": 1,
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
