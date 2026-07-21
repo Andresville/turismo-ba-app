@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "TurismoBA",
+    "name": "Turismo Buenos Aires",
     "slug": "TurismoBA",
     "version": "1.0.0",
     "owner": "veco2804",
@@ -13,7 +13,7 @@
       "icon": "./assets/images/icon.png",
       "bundleIdentifier": "com.andresville.turismoba",
       "infoPlist": {
-        "NSLocationWhenInUseUsageDescription": "Turismo BA utiliza tu ubicación para mostrarte los puntos turísticos y restaurantes más cercanos en el mapa y calcular tu circuito peatonal.",
+        "NSLocationWhenInUseUsageDescription": "Turismo Buenos Aires utiliza tu ubicación para mostrarte los puntos turísticos y restaurantes más cercanos en el mapa y calcular tu circuito peatonal.",
         "ITSAppUsesNonExemptEncryption": false
       }
     },

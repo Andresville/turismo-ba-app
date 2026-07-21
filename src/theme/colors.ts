@@ -4,15 +4,15 @@ export const appTheme = {
   ...DefaultTheme,
   colors: {
     ...DefaultTheme.colors,
-    primary: "#15315A", // azul-chapa
+    primary: "#0A398A", // azul-buenos-aires
     secondary: "#C9542A", // terracota
     tertiary: "#E0A23A", // mostaza
-    background: "#EFEADD", // marfil
-    surface: "#FBF9F2", // marfil-card
+    background: "#EDF4FC", // celeste-buenos-aires-pastel
+    surface: "#FFFFFF", // blanco card
     text: "#1B2330", // tinta
     textSecondary: "#5B6270", // tinta-soft
     success: "#3F6B4F", // verde-parque
-    border: "#D9D2BC", // linea-borde
+    border: "#C7D8EB", // linea-celeste-borde
   },
 };
 

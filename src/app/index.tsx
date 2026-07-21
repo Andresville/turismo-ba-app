@@ -1,3 +1,4 @@
+import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import React from "react";
 import { StyleSheet, TouchableOpacity, View } from "react-native";
@@ -7,14 +8,14 @@ import { useLang } from "../context/LangContext";
 
 const traducciones = {
   es: {
-    titulo: "Turismo BA",
+    titulo: "Turismo Buenos Aires",
     descripcion:
       "Descubrí Buenos Aires a tu manera: historia, arte, parques y los mejores restaurantes de la ciudad.",
     btnComenzar: "Comenzar",
     notaPie: "Para viajeros del exterior y del interior del país",
   },
   en: {
-    titulo: "BA Tourism",
+    titulo: "Buenos Aires Tourism",
     descripcion:
       "Discover Buenos Aires your way: history, art, parks, and the best dining in the city.",
     btnComenzar: "Get Started",
@@ -34,11 +35,10 @@ export default function SplashScreen() {
     >
       <View style={styles.splash}>
         {/* Marca / Logo */}
-        <View style={[styles.mark, { backgroundColor: theme.colors.tertiary }]}>
-          <Text style={[styles.markText, { color: theme.colors.primary }]}>
-            BA
-          </Text>
-        </View>
+        <Image
+          source={require("../../assets/images/icon.png")}
+          style={{ width: 80, height: 80, borderRadius: 18, marginBottom: 16 }}
+        />
 
         <Text style={styles.title}>{t.titulo}</Text>
         <Text style={styles.tag}>{t.descripcion}</Text>

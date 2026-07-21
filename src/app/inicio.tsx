@@ -192,14 +192,22 @@ export default function InicioScreen() {
       <View
         style={[styles.chapaBar, { backgroundColor: theme.colors.primary }]}
       >
-        <View>
-          <Text style={styles.chapaTitle}>{t("inicio.ciudad")}</Text>
-          <Text style={styles.chapaSub}>
-            <Ionicons name="location-sharp" size={12} color="#C7D2E3" />
-            {placeName
-              ? ` ${t("inicio.ubicacionPrefix")} ${placeName}`
-              : ` ${t("inicio.ubicacionDefault")}`}
-          </Text>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+          <Image
+            source={require("../../assets/images/icon.png")}
+            style={{ width: 42, height: 42, borderRadius: 10 }}
+          />
+          <View>
+            <Text style={styles.chapaTitle}>
+              {lang === "en" ? "Buenos Aires Tourism" : "Turismo Buenos Aires"}
+            </Text>
+            <Text style={styles.chapaSub}>
+              <Ionicons name="location-sharp" size={12} color="#C7D2E3" />
+              {placeName
+                ? ` ${t("inicio.ubicacionPrefix")} ${placeName}`
+                : ` ${t("inicio.ubicacionDefault")}`}
+            </Text>
+          </View>
         </View>
       </View>
 
