@@ -1,4 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
+import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import React, { useEffect, useMemo, useState } from "react";
 import {
@@ -12,16 +13,15 @@ import {
 } from "react-native";
 import { Card, Text } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Image } from "expo-image";
 import BottomNavBar from "../components/BottomNavBar";
 
+import { ErrorState, OfflineBanner } from "../components/connection-status";
 import { useLocation } from "../context/LocationContext";
+import { OFFLINE_KEYS, offlineCache } from "../lib/offline-cache";
 import { supabase } from "../lib/supabase";
-import { getCategoryBadgeColors, getCategoryColor, getCategoryIcon, getCategoryLabel, useAppTheme } from "../theme/colors";
 import { useTranslation } from "../locales/i18n";
+import { getCategoryBadgeColors, getCategoryColor, getCategoryIcon, getCategoryLabel, useAppTheme } from "../theme/colors";
 import { Lugar } from "../types/database";
-import { offlineCache, OFFLINE_KEYS } from "../lib/offline-cache";
-import { OfflineBanner, ErrorState } from "../components/connection-status";
 
 const DB_CATEGORIAS = [
   "Museos",
@@ -210,19 +210,6 @@ export default function InicioScreen() {
             </Text>
           </View>
         </View>
-
-        {/* Fila de iconos de la cabecera (Mockup UI) */}
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 16 }}>
-          <TouchableOpacity onPress={() => searchInputRef.current?.focus()}>
-            <Ionicons name="search-outline" size={21} color="#ffffff" />
-          </TouchableOpacity>
-          <TouchableOpacity activeOpacity={0.7}>
-            <Ionicons name="notifications-outline" size={21} color="#ffffff" />
-          </TouchableOpacity>
-          <TouchableOpacity activeOpacity={0.7}>
-            <Ionicons name="person-outline" size={21} color="#ffffff" />
-          </TouchableOpacity>
-        </View>
       </View>
 
       {errorLoading ? (
@@ -351,56 +338,56 @@ export default function InicioScreen() {
                       });
                     }}
                   >
-                  <View style={styles.photoContainer}>
-                    {fotoUrl ? (
-                      <Image source={{ uri: fotoUrl }} style={styles.cardImage} contentFit="cover" transition={200} />
-                    ) : (
-                      <View style={[styles.placeholderPhoto, { backgroundColor: theme.colors.background }]}>
-                        <Ionicons name={config.icon as any} size={32} color={theme.colors.textSecondary} />
-                      </View>
-                    )}
-                    <View
-                      style={[
-                        styles.badge,
-                        {
-                          backgroundColor: badgeColors.bg,
-                          borderColor: badgeColors.border,
-                        },
-                      ]}
-                    >
-                      <Text style={[styles.badgeText, { color: badgeColors.text }]}>
-                        {labelExhibido}
-                      </Text>
-                    </View>
-                  </View>
-
-                  <Card.Content style={styles.cardBody}>
-                    <View style={styles.nameRow}>
-                      <Text style={styles.restName} numberOfLines={1}>
-                        {lugar.nombre}
-                      </Text>
-                      {location && (
-                        <View style={styles.distPill}>
-                          <Text style={styles.distText}>
-                            {formatDistancia(lugar.dist)}
-                          </Text>
+                    <View style={styles.photoContainer}>
+                      {fotoUrl ? (
+                        <Image source={{ uri: fotoUrl }} style={styles.cardImage} contentFit="cover" transition={200} />
+                      ) : (
+                        <View style={[styles.placeholderPhoto, { backgroundColor: theme.colors.background }]}>
+                          <Ionicons name={config.icon as any} size={32} color={theme.colors.textSecondary} />
                         </View>
                       )}
+                      <View
+                        style={[
+                          styles.badge,
+                          {
+                            backgroundColor: badgeColors.bg,
+                            borderColor: badgeColors.border,
+                          },
+                        ]}
+                      >
+                        <Text style={[styles.badgeText, { color: badgeColors.text }]}>
+                          {labelExhibido}
+                        </Text>
+                      </View>
                     </View>
-                    <View style={styles.infoRow}>
-                      <Ionicons name="location-outline" size={12} color={theme.colors.textSecondary} />
-                      <Text style={[styles.infoText, { color: theme.colors.textSecondary }]} numberOfLines={1}>
-                        {lugar.direccion || "Dirección no disponible"}
-                      </Text>
-                    </View>
-                  </Card.Content>
-                </Card>
-              );
-            })}
-          </View>
-        )}
-        <View style={{ height: 24 }} />
-      </ScrollView>
+
+                    <Card.Content style={styles.cardBody}>
+                      <View style={styles.nameRow}>
+                        <Text style={styles.restName} numberOfLines={1}>
+                          {lugar.nombre}
+                        </Text>
+                        {location && (
+                          <View style={styles.distPill}>
+                            <Text style={styles.distText}>
+                              {formatDistancia(lugar.dist)}
+                            </Text>
+                          </View>
+                        )}
+                      </View>
+                      <View style={styles.infoRow}>
+                        <Ionicons name="location-outline" size={12} color={theme.colors.textSecondary} />
+                        <Text style={[styles.infoText, { color: theme.colors.textSecondary }]} numberOfLines={1}>
+                          {lugar.direccion || "Dirección no disponible"}
+                        </Text>
+                      </View>
+                    </Card.Content>
+                  </Card>
+                );
+              })}
+            </View>
+          )}
+          <View style={{ height: 24 }} />
+        </ScrollView>
       )}
 
       <BottomNavBar activeTab={0} />
