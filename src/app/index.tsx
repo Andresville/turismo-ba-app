@@ -12,14 +12,12 @@ const traducciones = {
     descripcion:
       "Descubrí Buenos Aires a tu manera: historia, arte, parques y los mejores restaurantes de la ciudad.",
     btnComenzar: "Comenzar",
-    notaPie: "Para viajeros del exterior y del interior del país",
   },
   en: {
     titulo: "Buenos Aires Tourism",
     descripcion:
       "Discover Buenos Aires your way: history, art, parks, and the best dining in the city.",
     btnComenzar: "Get Started",
-    notaPie: "For international and domestic travelers",
   },
 };
 
@@ -82,8 +80,6 @@ export default function SplashScreen() {
         >
           <Text style={styles.ctaText}>{t.btnComenzar}</Text>
         </TouchableOpacity>
-
-        <Text style={styles.footNote}>{t.notaPie}</Text>
       </View>
     </SafeAreaView>
   );
