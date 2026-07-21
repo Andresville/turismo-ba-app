@@ -1,22 +1,18 @@
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import React from "react";
-import { StyleSheet, TouchableOpacity, View } from "react-native";
+import { Platform, StyleSheet, TouchableOpacity, View } from "react-native";
 import { Text, useTheme } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useLang } from "../context/LangContext";
 
 const traducciones = {
   es: {
-    titulo: "Turismo Buenos Aires",
-    descripcion:
-      "Descubrí Buenos Aires a tu manera: historia, arte, parques y los mejores restaurantes de la ciudad.",
+    descripcion: "Descubrí Buenos Aires a tu manera...",
     btnComenzar: "Comenzar",
   },
   en: {
-    titulo: "Buenos Aires Tourism",
-    descripcion:
-      "Discover Buenos Aires your way: history, art, parks, and the best dining in the city.",
+    descripcion: "Discover Buenos Aires your way...",
     btnComenzar: "Get Started",
   },
 };
@@ -35,10 +31,13 @@ export default function SplashScreen() {
         {/* Marca / Logo */}
         <Image
           source={require("../../assets/images/icon.png")}
-          style={{ width: 80, height: 80, borderRadius: 18, marginBottom: 16 }}
+          style={{ width: 220, height: 220, marginBottom: 20 }}
+          contentFit="contain"
         />
 
-        <Text style={styles.title}>{t.titulo}</Text>
+        <Text style={styles.title}>
+          {lang === "en" ? "Buenos Aires\nTourism" : "Turismo\nBuenos Aires"}
+        </Text>
         <Text style={styles.tag}>{t.descripcion}</Text>
 
         <View style={styles.langPick}>
@@ -97,26 +96,16 @@ const styles = StyleSheet.create({
     paddingBottom: 30,
     paddingTop: 34,
   },
-  mark: {
-    width: 62,
-    height: 62,
-    borderRadius: 14,
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: 18,
-  },
-  markText: {
-    fontSize: 24,
-    fontWeight: "bold",
-  },
+
   title: {
-    fontSize: 34,
-    fontWeight: "800",
+    fontSize: 38,
+    fontFamily: Platform.OS === "ios" ? "Georgia" : "serif",
+    fontWeight: "bold",
     color: "#ffffff",
     marginTop: 20,
     marginBottom: 10,
     textAlign: "center",
-    letterSpacing: -0.5,
+    lineHeight: 46,
   },
   tag: {
     fontSize: 15,
