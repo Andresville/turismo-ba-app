@@ -74,6 +74,7 @@ export default function InicioScreen() {
   const { location, placeName } = useLocation();
   const [categoriaFiltro, setCategoriaFiltro] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState<string>("");
+  const searchInputRef = React.useRef<TextInput>(null);
 
   const [lugaresBd, setLugaresBd] = useState<Lugar[]>([]);
   const [isOffline, setIsOffline] = useState(false);
@@ -209,6 +210,19 @@ export default function InicioScreen() {
             </Text>
           </View>
         </View>
+
+        {/* Fila de iconos de la cabecera (Mockup UI) */}
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 16 }}>
+          <TouchableOpacity onPress={() => searchInputRef.current?.focus()}>
+            <Ionicons name="search-outline" size={21} color="#ffffff" />
+          </TouchableOpacity>
+          <TouchableOpacity activeOpacity={0.7}>
+            <Ionicons name="notifications-outline" size={21} color="#ffffff" />
+          </TouchableOpacity>
+          <TouchableOpacity activeOpacity={0.7}>
+            <Ionicons name="person-outline" size={21} color="#ffffff" />
+          </TouchableOpacity>
+        </View>
       </View>
 
       {errorLoading ? (
@@ -227,6 +241,7 @@ export default function InicioScreen() {
               color={theme.colors.textSecondary}
             />
             <TextInput
+              ref={searchInputRef}
               placeholder={t("inicio.buscar")}
               placeholderTextColor={theme.colors.textSecondary}
               style={styles.searchInput}
