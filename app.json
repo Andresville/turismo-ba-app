@@ -19,6 +19,11 @@
     },
     "android": {
       "package": "com.andresville.turismoba",
+      "config": {
+        "googleMaps": {
+          "apiKey": "AIzaSyBXtIoO_bFmB2tyclTb3fhQdm1IiUBo54Q"
+        }
+      },
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
