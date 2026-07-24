@@ -350,9 +350,6 @@ export default function MapaScreen() {
               {/* Renderizado de marcadores */}
               {lugaresMostrados.map((lugar) => {
                 if (!lugar.lat || !lugar.lng) return null;
-                const iconName = getCategoryIcon(lugar.categoria);
-                const mapIconName = iconName.endsWith("-outline") ? iconName : `${iconName}-outline`;
-                const labelExhibido = getCategoryLabel(lugar.categoria, lang);
                 return (
                   <Marker
                     key={lugar.id}
@@ -363,23 +360,8 @@ export default function MapaScreen() {
                     title={lugar.nombre}
                     description={lang === "es" ? "Ver detalle →" : "View details →"}
                     onCalloutPress={() => handleNavigateToDetail(lugar)}
-                  >
-                    {/* Contenedor transparente más grande para ampliar el hit target táctil */}
-                    <View style={styles.markerHitTarget}>
-                      <View
-                        style={[
-                          styles.customMarkerCircle,
-                          { backgroundColor: getCategoryColor(lugar.categoria) },
-                        ]}
-                      >
-                        <Ionicons
-                          name={mapIconName as any}
-                          size={11}
-                          color="#fff"
-                        />
-                      </View>
-                    </View>
-                  </Marker>
+                    pinColor={getCategoryColor(lugar.categoria)}
+                  />
                 );
               })}
 
