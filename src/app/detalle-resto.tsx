@@ -150,30 +150,31 @@ export default function DetalleRestoScreen() {
         </View>
 
         {/* Previsualización del mapa (Minimapa de usabilidad) */}
-        <View style={styles.miniMapContainer}>
-          <MapView
-            style={styles.miniMap}
-            region={{
-              latitude: resto.lat,
-              longitude: resto.lng,
-              latitudeDelta: 0.004,
-              longitudeDelta: 0.004,
-            }}
-            cameraZoomRange={{
-              minCenterCoordinateDistance: 100,
-              maxCenterCoordinateDistance: 200,
-            }}
-            scrollEnabled={false}
-            zoomEnabled={false}
-            pitchEnabled={false}
-            rotateEnabled={false}
-          >
-            <Marker
-              coordinate={{ latitude: resto.lat, longitude: resto.lng }}
-              title={resto.nombre}
-            />
-          </MapView>
-        </View>
+        {resto?.lat && resto?.lng ? (
+          <View style={styles.miniMapContainer}>
+            <MapView
+              style={styles.miniMap}
+              region={{
+                latitude: Number(resto.lat),
+                longitude: Number(resto.lng),
+                latitudeDelta: 0.004,
+                longitudeDelta: 0.004,
+              }}
+              scrollEnabled={false}
+              zoomEnabled={false}
+              pitchEnabled={false}
+              rotateEnabled={false}
+            >
+              <Marker
+                coordinate={{
+                  latitude: Number(resto.lat),
+                  longitude: Number(resto.lng),
+                }}
+                title={resto.nombre}
+              />
+            </MapView>
+          </View>
+        ) : null}
 
         {/* Reseña Especial */}
         <View style={styles.descCard}>

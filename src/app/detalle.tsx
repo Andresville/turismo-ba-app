@@ -227,30 +227,31 @@ export default function DetalleScreen() {
         </View>
 
         {/* Previsualización del mapa (Minimapa de usabilidad) */}
-        <View style={styles.miniMapContainer}>
-          <MapView
-            style={styles.miniMap}
-            region={{
-              latitude: lugar.lat,
-              longitude: lugar.lng,
-              latitudeDelta: 0.004,
-              longitudeDelta: 0.004,
-            }}
-            cameraZoomRange={{
-              minCenterCoordinateDistance: 100,
-              maxCenterCoordinateDistance: 200,
-            }}
-            scrollEnabled={false}
-            zoomEnabled={false}
-            pitchEnabled={false}
-            rotateEnabled={false}
-          >
-            <Marker
-              coordinate={{ latitude: lugar.lat, longitude: lugar.lng }}
-              title={lugar.nombre}
-            />
-          </MapView>
-        </View>
+        {lugar?.lat && lugar?.lng ? (
+          <View style={styles.miniMapContainer}>
+            <MapView
+              style={styles.miniMap}
+              region={{
+                latitude: Number(lugar.lat),
+                longitude: Number(lugar.lng),
+                latitudeDelta: 0.004,
+                longitudeDelta: 0.004,
+              }}
+              scrollEnabled={false}
+              zoomEnabled={false}
+              pitchEnabled={false}
+              rotateEnabled={false}
+            >
+              <Marker
+                coordinate={{
+                  latitude: Number(lugar.lat),
+                  longitude: Number(lugar.lng),
+                }}
+                title={lugar.nombre}
+              />
+            </MapView>
+          </View>
+        ) : null}
 
         <View style={styles.descCard}>
           <View style={styles.descHeadRow}>

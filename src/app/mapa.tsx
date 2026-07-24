@@ -345,7 +345,7 @@ export default function MapaScreen() {
               style={styles.map}
               provider={Platform.OS === 'ios' ? PROVIDER_GOOGLE : undefined}
               initialRegion={regionInicial}
-              showsUserLocation={true}
+              showsUserLocation={!!location}
             >
               {/* Renderizado de marcadores */}
               {lugaresMostrados.map((lugar) => {
@@ -356,13 +356,16 @@ export default function MapaScreen() {
                 return (
                   <Marker
                     key={lugar.id}
-                    coordinate={{ latitude: lugar.lat, longitude: lugar.lng }}
+                    coordinate={{
+                      latitude: Number(lugar.lat),
+                      longitude: Number(lugar.lng),
+                    }}
                     title={lugar.nombre}
                     description={lang === "es" ? "Ver detalle →" : "View details →"}
                     onCalloutPress={() => handleNavigateToDetail(lugar)}
                   >
                     {/* Contenedor transparente más grande para ampliar el hit target táctil */}
-                    <View style={styles.markerHitTarget} pointerEvents="none">
+                    <View style={styles.markerHitTarget}>
                       <View
                         style={[
                           styles.customMarkerCircle,
