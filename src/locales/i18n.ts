@@ -1,10 +1,11 @@
 import { useLang } from "../context/LangContext";
 import es from "./es.json";
 import en from "./en.json";
+import pt from "./pt.json";
 
 // Type definitions to help make the translation system safe and structured
 type TranslationSchema = typeof es;
-const translations: Record<string, any> = { es, en };
+const translations: Record<string, any> = { es, en, pt };
 
 export const useTranslation = () => {
   const { lang } = useLang();

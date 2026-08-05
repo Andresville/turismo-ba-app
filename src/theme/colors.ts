@@ -33,6 +33,18 @@ export const getCategoryLabel = (categoria: string, lang: string) => {
       case "Restaurantes": return "Restaurant";
       default: return categoria;
     }
+  } else if (lang === "pt") {
+    switch (categoria) {
+      case "Museos": return "Museu";
+      case "Parques": return "Parque";
+      case "Cupulas": return "Cúpula";
+      case "Edificios historicos": return "Edifício Histórico";
+      case "Teatros": return "Teatro";
+      case "Canchas de futbol": return "Estádio";
+      case "Zonas turisticas": return "Zona Turística";
+      case "Restaurantes": return "Restaurante";
+      default: return categoria;
+    }
   } else {
     switch (categoria) {
       case "Canchas de futbol": return "Estadio";

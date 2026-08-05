@@ -123,7 +123,7 @@ export default function DetalleScreen() {
         hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
         accessible={true}
         accessibilityRole="button"
-        accessibilityLabel={lang === "es" ? "Volver a la pantalla anterior" : "Go back"}
+        accessibilityLabel={lang === "es" ? "Volver a la pantalla anterior" : lang === "pt" ? "Voltar para a tela anterior" : "Go back"}
       >
         <Ionicons name="arrow-back" size={24} color="#1B2330" />
       </TouchableOpacity>
@@ -170,7 +170,7 @@ export default function DetalleScreen() {
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                 accessible={true}
                 accessibilityRole="button"
-                accessibilityLabel={lang === 'es' ? 'Mostrar foto actual' : 'Show current photo'}
+                accessibilityLabel={lang === 'es' ? 'Mostrar foto actual' : lang === 'pt' ? 'Mostrar foto atual' : 'Show current photo'}
               >
                 <Text
                   style={[
@@ -194,7 +194,7 @@ export default function DetalleScreen() {
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                 accessible={true}
                 accessibilityRole="button"
-                accessibilityLabel={lang === 'es' ? 'Mostrar foto antigua' : 'Show historic photo'}
+                accessibilityLabel={lang === 'es' ? 'Mostrar foto antigua' : lang === 'pt' ? 'Mostrar foto antiga' : 'Show historic photo'}
               >
                 <Text
                   style={[
@@ -268,7 +268,7 @@ export default function DetalleScreen() {
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                 accessible={true}
                 accessibilityRole="button"
-                accessibilityLabel={lang === 'es' ? 'Mostrar reseña en Español' : 'Show description in Spanish'}
+                accessibilityLabel={lang === 'es' ? 'Mostrar reseña en Español' : lang === 'pt' ? 'Mostrar descrição em Espanhol' : 'Show description in Spanish'}
               >
                 <Text
                   style={[
@@ -292,7 +292,7 @@ export default function DetalleScreen() {
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                 accessible={true}
                 accessibilityRole="button"
-                accessibilityLabel={lang === 'es' ? 'Mostrar reseña en Inglés' : 'Show description in English'}
+                accessibilityLabel={lang === 'es' ? 'Mostrar reseña en Inglés' : lang === 'pt' ? 'Mostrar descrição em Inglês' : 'Show description in English'}
               >
                 <Text
                   style={[
@@ -305,17 +305,49 @@ export default function DetalleScreen() {
                   EN
                 </Text>
               </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.toggleBtn,
+                  localLang === "pt" && {
+                    backgroundColor: theme.colors.primary,
+                  },
+                ]}
+                onPress={() => setLocalLang("pt")}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                accessible={true}
+                accessibilityRole="button"
+                accessibilityLabel={lang === 'es' ? 'Mostrar reseña en Portugués' : lang === 'pt' ? 'Mostrar descrição em Português' : 'Show description in Portuguese'}
+              >
+                <Text
+                  style={[
+                    styles.toggleBtnText,
+                    localLang === "pt"
+                      ? { color: "#fff" }
+                      : { color: theme.colors.textSecondary },
+                  ]}
+                >
+                  PT
+                </Text>
+              </TouchableOpacity>
             </View>
           </View>
           <Text style={styles.descBody}>
-            {localLang === "es" ? lugar.descripcion_es : lugar.descripcion_en}
+            {localLang === "es"
+              ? lugar.descripcion_es
+              : localLang === "pt"
+              ? lugar.descripcion_pt || lugar.descripcion_es
+              : lugar.descripcion_en}
           </Text>
         </View>
 
         <View style={styles.descCard}>
           <Text style={styles.descLabel}>{t("detalle.historia")}</Text>
           <Text style={[styles.descBody, { marginTop: 8 }]}>
-            {localLang === "es" ? lugar.historia_es : lugar.historia_en}
+            {localLang === "es"
+              ? lugar.historia_es
+              : localLang === "pt"
+              ? lugar.historia_pt || lugar.historia_es
+              : lugar.historia_en}
           </Text>
         </View>
 
@@ -353,7 +385,19 @@ export default function DetalleScreen() {
             onPress={() => toggleItem(lugar.id)}
             accessible={true}
             accessibilityRole="button"
-            accessibilityLabel={saved ? (lang === "es" ? "Quitar de Mi Recorrido" : "Remove from itinerary") : (lang === "es" ? "Guardar en Mi Recorrido" : "Save to itinerary")}
+            accessibilityLabel={
+              saved
+                ? lang === "es"
+                  ? "Quitar de Mi Recorrido"
+                  : lang === "pt"
+                  ? "Remover do Meu Roteiro"
+                  : "Remove from itinerary"
+                : lang === "es"
+                ? "Guardar en Mi Recorrido"
+                : lang === "pt"
+                ? "Salvar no Meu Roteiro"
+                : "Save to itinerary"
+            }
           >
             <Ionicons
               name={saved ? "heart" : "heart-outline"}

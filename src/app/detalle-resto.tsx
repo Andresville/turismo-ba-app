@@ -115,7 +115,7 @@ export default function DetalleRestoScreen() {
         hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
         accessible={true}
         accessibilityRole="button"
-        accessibilityLabel={lang === "es" ? "Volver a la pantalla anterior" : "Go back"}
+        accessibilityLabel={lang === "es" ? "Volver a la pantalla anterior" : lang === "pt" ? "Voltar para a tela anterior" : "Go back"}
       >
         <Ionicons name="arrow-back" size={24} color="#1B2330" />
       </TouchableOpacity>
@@ -187,7 +187,7 @@ export default function DetalleRestoScreen() {
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                 accessible={true}
                 accessibilityRole="button"
-                accessibilityLabel={lang === 'es' ? 'Mostrar reseña en Español' : 'Show description in Spanish'}
+                accessibilityLabel={lang === 'es' ? 'Mostrar reseña en Español' : lang === 'pt' ? 'Mostrar resenha em Espanhol' : 'Show description in Spanish'}
               >
                 <Text style={[styles.toggleBtnText, localLang === "es" ? { color: "#fff" } : { color: theme.colors.textSecondary }]}>
                   ES
@@ -199,16 +199,32 @@ export default function DetalleRestoScreen() {
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                 accessible={true}
                 accessibilityRole="button"
-                accessibilityLabel={lang === 'es' ? 'Mostrar reseña en Inglés' : 'Show description in English'}
+                accessibilityLabel={lang === 'es' ? 'Mostrar reseña en Inglés' : lang === 'pt' ? 'Mostrar resenha em Inglês' : 'Show description in English'}
               >
                 <Text style={[styles.toggleBtnText, localLang === "en" ? { color: "#fff" } : { color: theme.colors.textSecondary }]}>
                   EN
                 </Text>
               </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.toggleBtn, localLang === "pt" && { backgroundColor: theme.colors.primary }]}
+                onPress={() => setLocalLang("pt")}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                accessible={true}
+                accessibilityRole="button"
+                accessibilityLabel={lang === 'es' ? 'Mostrar reseña en Portugués' : lang === 'pt' ? 'Mostrar resenha em Português' : 'Show description in Portuguese'}
+              >
+                <Text style={[styles.toggleBtnText, localLang === "pt" ? { color: "#fff" } : { color: theme.colors.textSecondary }]}>
+                  PT
+                </Text>
+              </TouchableOpacity>
             </View>
           </View>
           <Text style={styles.descBody}>
-            {localLang === "es" ? resto.resena_especial_es : resto.resena_especial_en}
+            {localLang === "es"
+              ? resto.resena_especial_es
+              : localLang === "pt"
+              ? resto.resena_especial_pt || resto.resena_especial_es
+              : resto.resena_especial_en}
           </Text>
         </View>
 
@@ -241,7 +257,19 @@ export default function DetalleRestoScreen() {
             onPress={() => toggleItem(resto.id)}
             accessible={true}
             accessibilityRole="button"
-            accessibilityLabel={saved ? (lang === "es" ? "Quitar de Mi Recorrido" : "Remove from itinerary") : (lang === "es" ? "Guardar en Mi Recorrido" : "Save to itinerary")}
+            accessibilityLabel={
+              saved
+                ? lang === "es"
+                  ? "Quitar de Mi Recorrido"
+                  : lang === "pt"
+                  ? "Remover do Meu Roteiro"
+                  : "Remove from itinerary"
+                : lang === "es"
+                ? "Guardar en Mi Recorrido"
+                : lang === "pt"
+                ? "Salvar no Meu Roteiro"
+                : "Save to itinerary"
+            }
           >
             <Ionicons
               name={saved ? "heart" : "heart-outline"}

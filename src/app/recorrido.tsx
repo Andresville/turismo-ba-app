@@ -14,12 +14,18 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import BottomNavBar from "../components/BottomNavBar";
 import { useItinerary } from "../context/ItineraryContext";
+import { useLocation } from "../context/LocationContext";
 import { supabase } from "../lib/supabase";
 import { useAppTheme, getCategoryLabel } from "../theme/colors";
 import { useTranslation } from "../locales/i18n";
 import { Lugar } from "../types/database";
 import { offlineCache, OFFLINE_KEYS } from "../lib/offline-cache";
 import { OfflineBanner, ErrorState } from "../components/connection-status";
+import { ordenarPorCercania } from "../utils/geo";
+
+// Obelisco: punto de partida por defecto cuando todavía no hay GPS del usuario.
+const OBELISCO_LAT = -34.6037;
+const OBELISCO_LNG = -58.3816;
 
 export default function RecorridoScreen() {
   const theme = useAppTheme();
@@ -27,6 +33,7 @@ export default function RecorridoScreen() {
   const router = useRouter();
 
   const { savedItems, toggleItem } = useItinerary();
+  const { location } = useLocation();
   const [lugares, setLugares] = useState<Lugar[]>([]);
   const [visitedItems, setVisitedItems] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
@@ -92,15 +99,14 @@ export default function RecorridoScreen() {
     return lugares.filter((l) => savedItems.includes(l.id));
   }, [lugares, savedItems]);
 
-  // 4. Agrupar lugares guardados por comuna
-  const lugaresPorComuna = useMemo(() => {
-    const grupos: Record<number, Lugar[]> = {};
-    lugaresGuardados.forEach((l) => {
-      if (!grupos[l.comuna]) grupos[l.comuna] = [];
-      grupos[l.comuna].push(l);
-    });
-    return grupos;
-  }, [lugaresGuardados]);
+  // 4. Ordenar los lugares guardados por cercanía a pie (vecino más cercano),
+  // arrancando desde la ubicación del usuario si está disponible, para que el
+  // recorrido no zigzaguee entre puntos lejanos y cercanos.
+  const lugaresOrdenados = useMemo(() => {
+    const startLat = location ? location.coords.latitude : OBELISCO_LAT;
+    const startLng = location ? location.coords.longitude : OBELISCO_LNG;
+    return ordenarPorCercania(lugaresGuardados, startLat, startLng);
+  }, [lugaresGuardados, location]);
 
   const toggleVisited = async (id: string) => {
     let newList = [...visitedItems];
@@ -153,8 +159,8 @@ export default function RecorridoScreen() {
           <View style={[styles.emptyIconCircle, { backgroundColor: "#FFF9EE", borderColor: "#D9D2BC" }]}>
             <Ionicons name="compass-outline" size={48} color={theme.colors.primary} />
           </View>
-          <Text style={styles.emptyTitle}>{t("recorrido.vacíoTitulo")}</Text>
-          <Text style={[styles.emptyDesc, { color: "#5A5E50" }]}>{t("recorrido.vacíoDesc")}</Text>
+          <Text style={styles.emptyTitle}>{t("recorrido.vacioTitulo")}</Text>
+          <Text style={[styles.emptyDesc, { color: "#5A5E50" }]}>{t("recorrido.vacioDesc")}</Text>
           <TouchableOpacity
             style={[styles.btnExplorar, { backgroundColor: theme.colors.primary }]}
             onPress={() => router.push("/inicio")}
@@ -193,96 +199,97 @@ export default function RecorridoScreen() {
             </TouchableOpacity>
           </View>
 
-          {/* Listado de lugares agrupados por Comuna */}
+          {/* Listado de lugares en orden sugerido para ir a pie */}
           <ScrollView style={styles.scrollArea} showsVerticalScrollIndicator={false}>
-            {Object.keys(lugaresPorComuna)
-              .map(Number)
-              .sort((a, b) => a - b)
-              .map((comunaNum) => (
-                <View key={comunaNum} style={styles.comunaGroup}>
-                  {/* Etiqueta de Comuna */}
-                  <Text style={[styles.comunaLabel, { color: theme.colors.textSecondary }]}>
-                    {t("recorrido.comuna", { c: comunaNum })}
-                  </Text>
+            <Text style={[styles.comunaLabel, { color: theme.colors.textSecondary }]}>
+              {t("recorrido.ordenSugerido")}
+            </Text>
 
-                  {/* Lista de lugares de la comuna */}
-                  {lugaresPorComuna[comunaNum].map((lugar) => {
-                    const visited = isVisited(lugar.id);
-                    return (
-                      <View
-                        key={lugar.id}
-                        style={[
-                          styles.placeRow,
-                          { backgroundColor: theme.colors.surface, borderColor: theme.colors.border },
-                        ]}
-                      >
-                        {/* Checkbox circular para marcar como visitado */}
-                        <TouchableOpacity
-                          style={[
-                            styles.checkbox,
-                            { borderColor: theme.colors.primary },
-                            visited && { backgroundColor: theme.colors.primary },
-                          ]}
-                          onPress={() => toggleVisited(lugar.id)}
-                          activeOpacity={0.7}
-                          accessible={true}
-                          accessibilityRole="checkbox"
-                          accessibilityState={{ checked: visited }}
-                          accessibilityLabel={lang === 'es' 
-                            ? `Marcar ${lugar.nombre} como visitado` 
-                            : `Mark ${lugar.nombre} as visited`}
-                        >
-                          {visited && <Ionicons name="checkmark" size={14} color="#fff" />}
-                        </TouchableOpacity>
+            {lugaresOrdenados.map((lugar, index) => {
+              const visited = isVisited(lugar.id);
+              return (
+                <View
+                  key={lugar.id}
+                  style={[
+                    styles.placeRow,
+                    { backgroundColor: theme.colors.surface, borderColor: theme.colors.border },
+                  ]}
+                >
+                  {/* Checkbox circular: muestra el orden de la parada, y el visto al marcarla */}
+                  <TouchableOpacity
+                    style={[
+                      styles.checkbox,
+                      { borderColor: theme.colors.primary },
+                      visited && { backgroundColor: theme.colors.primary },
+                    ]}
+                    onPress={() => toggleVisited(lugar.id)}
+                    activeOpacity={0.7}
+                    accessible={true}
+                    accessibilityRole="checkbox"
+                    accessibilityState={{ checked: visited }}
+                    accessibilityLabel={lang === 'es'
+                      ? `Parada ${index + 1}. Marcar ${lugar.nombre} como visitado`
+                      : lang === 'pt'
+                      ? `Parada ${index + 1}. Marcar ${lugar.nombre} como visitado`
+                      : `Stop ${index + 1}. Mark ${lugar.nombre} as visited`}
+                  >
+                    {visited ? (
+                      <Ionicons name="checkmark" size={14} color="#fff" />
+                    ) : (
+                      <Text style={[styles.checkboxOrderText, { color: theme.colors.primary }]}>
+                        {index + 1}
+                      </Text>
+                    )}
+                  </TouchableOpacity>
 
-                        {/* Información del lugar */}
-                        <TouchableOpacity
-                          style={styles.placeInfo}
-                          activeOpacity={0.8}
-                          onPress={() => router.push({ pathname: lugar.categoria === "Restaurantes" ? "/detalle-resto" as any : "/detalle" as any, params: { id: lugar.id } })}
-                          accessible={true}
-                          accessibilityRole="link"
-                          accessibilityLabel={`${lugar.nombre}, ${getCategoryLabel(lugar.categoria, lang)}. ${lang === 'es' ? 'Toca para ver detalles' : 'Double tap to view details'}`}
-                        >
-                          <Text style={[styles.placeName, visited && styles.textLineThrough]} numberOfLines={1}>
-                            {lugar.nombre}
-                          </Text>
-                          <Text style={styles.placeCat} numberOfLines={1}>
-                            {getCategoryLabel(lugar.categoria, lang).toUpperCase()}
-                          </Text>
-                        </TouchableOpacity>
+                  {/* Información del lugar */}
+                  <TouchableOpacity
+                    style={styles.placeInfo}
+                    activeOpacity={0.8}
+                    onPress={() => router.push({ pathname: lugar.categoria === "Restaurantes" ? "/detalle-resto" as any : "/detalle" as any, params: { id: lugar.id } })}
+                    accessible={true}
+                    accessibilityRole="link"
+                    accessibilityLabel={`${lugar.nombre}, ${getCategoryLabel(lugar.categoria, lang)}. ${lang === 'es' ? 'Toca para ver detalles' : lang === 'pt' ? 'Toque para ver detalhes' : 'Double tap to view details'}`}
+                  >
+                    <Text style={[styles.placeName, visited && styles.textLineThrough]} numberOfLines={1}>
+                      {lugar.nombre}
+                    </Text>
+                    <Text style={styles.placeCat} numberOfLines={1}>
+                      {getCategoryLabel(lugar.categoria, lang).toUpperCase()} · {t("recorrido.comuna", { c: lugar.comuna })}
+                    </Text>
+                  </TouchableOpacity>
 
-                        {/* Sello de pasaporte digital si está visitado */}
-                        {visited && (
-                          <View style={[styles.passportStamp, { borderColor: theme.colors.secondary }]}>
-                            <Text style={[styles.stampTextMain, { color: theme.colors.secondary }]}>
-                              {t("recorrido.visitado")}
-                            </Text>
-                            <Text style={[styles.stampTextSub, { color: theme.colors.secondary }]}>
-                              {t("recorrido.selloFecha")}
-                            </Text>
-                          </View>
-                        )}
+                  {/* Sello de pasaporte digital si está visitado */}
+                  {visited && (
+                    <View style={[styles.passportStamp, { borderColor: theme.colors.secondary }]}>
+                      <Text style={[styles.stampTextMain, { color: theme.colors.secondary }]}>
+                        {t("recorrido.visitado")}
+                      </Text>
+                      <Text style={[styles.stampTextSub, { color: theme.colors.secondary }]}>
+                        {t("recorrido.selloFecha")}
+                      </Text>
+                    </View>
+                  )}
 
-                        {/* Botón de eliminar del itinerario */}
-                        <TouchableOpacity
-                          style={styles.deleteBtn}
-                          onPress={() => toggleItem(lugar.id)}
-                          activeOpacity={0.7}
-                          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                          accessible={true}
-                          accessibilityRole="button"
-                          accessibilityLabel={lang === 'es'
-                            ? `Eliminar ${lugar.nombre} del recorrido`
-                            : `Remove ${lugar.nombre} from itinerary`}
-                        >
-                          <Ionicons name="trash-outline" size={17} color="#A83232" />
-                        </TouchableOpacity>
-                      </View>
-                    );
-                  })}
+                  {/* Botón de eliminar del itinerario */}
+                  <TouchableOpacity
+                    style={styles.deleteBtn}
+                    onPress={() => toggleItem(lugar.id)}
+                    activeOpacity={0.7}
+                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                    accessible={true}
+                    accessibilityRole="button"
+                    accessibilityLabel={lang === 'es'
+                      ? `Eliminar ${lugar.nombre} del recorrido`
+                      : lang === 'pt'
+                      ? `Remover ${lugar.nombre} do roteiro`
+                      : `Remove ${lugar.nombre} from itinerary`}
+                  >
+                    <Ionicons name="trash-outline" size={17} color="#A83232" />
+                  </TouchableOpacity>
                 </View>
-              ))}
+              );
+            })}
             <View style={{ height: 30 }} />
           </ScrollView>
         </View>
@@ -413,14 +420,12 @@ const styles = StyleSheet.create({
   scrollArea: {
     flex: 1,
   },
-  comunaGroup: {
-    marginTop: 12,
-  },
   comunaLabel: {
     fontSize: 10.5,
     fontWeight: "bold",
     textTransform: "uppercase",
     fontFamily: "monospace",
+    marginTop: 12,
     marginBottom: 8,
     letterSpacing: 0.5,
   },
@@ -441,6 +446,11 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     justifyContent: "center",
     alignItems: "center",
+  },
+  checkboxOrderText: {
+    fontSize: 10,
+    fontWeight: "bold",
+    fontFamily: "monospace",
   },
   placeInfo: {
     flex: 1,

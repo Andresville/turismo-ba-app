@@ -17,6 +17,9 @@ const traducciones = {
   en: {
     nav: ["Home", "Map", "Lodging", "Dining", "Itinerary"],
   },
+  pt: {
+    nav: ["Início", "Mapa", "Hospedagem", "Restô", "Roteiro"],
+  },
 };
 
 export default function BottomNavBar({ activeTab }: BottomNavBarProps) {

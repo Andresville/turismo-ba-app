@@ -9,8 +9,10 @@ export interface Lugar {
   barrio?: string;
   descripcion_es?: string;
   descripcion_en?: string;
+  descripcion_pt?: string;
   historia_es?: string;
   historia_en?: string;
+  historia_pt?: string;
   foto_actual_url?: string;
   foto_antigua_url?: string;
   audioguia_es_url?: string;
@@ -29,6 +31,7 @@ export interface Restaurante {
   direccion: string;
   resena_especial_es?: string;
   resena_especial_en?: string;
+  resena_especial_pt?: string;
   lat: number;
   lng: number;
   foto_url?: string;
@@ -39,6 +42,7 @@ export interface Alojamiento {
   nombre: string;
   tipo_es: string;
   tipo_en: string;
+  tipo_pt?: string;
   barrio: string;
   comuna: number;
   direccion: string;
@@ -48,6 +52,7 @@ export interface Alojamiento {
   lng: number;
   descripcion_es: string;
   descripcion_en: string;
+  descripcion_pt?: string;
   telefono: string;
   sitio_web: string;
 }

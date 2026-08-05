@@ -80,14 +80,16 @@ export default function AlojamientosScreen() {
 
   const handleCallPress = (telefono: string, nombre: string) => {
     Alert.alert(
-      lang === "es" ? "Confirmar llamada" : "Confirm Call",
+      lang === "es" ? "Confirmar llamada" : lang === "pt" ? "Confirmar ligação" : "Confirm Call",
       lang === "es"
         ? `¿Querés llamar a ${nombre} al número ${telefono}?`
+        : lang === "pt"
+        ? `Você quer ligar para ${nombre} no número ${telefono}?`
         : `Do you want to call ${nombre} at ${telefono}?`,
       [
-        { text: lang === "es" ? "Cancelar" : "Cancel", style: "cancel" },
+        { text: lang === "es" ? "Cancelar" : lang === "pt" ? "Cancelar" : "Cancel", style: "cancel" },
         {
-          text: lang === "es" ? "Llamar" : "Call",
+          text: lang === "es" ? "Llamar" : lang === "pt" ? "Ligar" : "Call",
           onPress: () => {
             const numClean = telefono.replace(/[\s-]/g, "");
             Linking.openURL(`tel:${numClean}`);
@@ -167,7 +169,7 @@ export default function AlojamientosScreen() {
                   activeOpacity={0.8}
                   accessible={true}
                   accessibilityRole="button"
-                  accessibilityLabel={`${label}. ${isSelected ? (lang === 'es' ? 'Seleccionado' : 'Selected') : ''}`}
+                  accessibilityLabel={`${label}. ${isSelected ? (lang === 'es' ? 'Seleccionado' : lang === 'pt' ? 'Selecionado' : 'Selected') : ''}`}
                 >
                   <Text
                     style={[
@@ -193,8 +195,8 @@ export default function AlojamientosScreen() {
           alojamientosFiltrados.map((item) => {
           const isExpanded = expandedId === item.id;
           const icon = getAlojamientoIcon(item.tipo_en);
-          const tipo = lang === "es" ? item.tipo_es : item.tipo_en;
-          const desc = lang === "es" ? item.descripcion_es : item.descripcion_en;
+          const tipo = lang === "es" ? item.tipo_es : lang === "pt" ? (item.tipo_pt || item.tipo_es) : item.tipo_en;
+          const desc = lang === "es" ? item.descripcion_es : lang === "pt" ? (item.descripcion_pt || item.descripcion_es) : item.descripcion_en;
 
           return (
             <Card
@@ -206,7 +208,7 @@ export default function AlojamientosScreen() {
               }}
               accessible={true}
               accessibilityRole="button"
-              accessibilityLabel={`${item.nombre}, ${tipo}, ${item.barrio}. ${isExpanded ? (lang === 'es' ? 'Toca para contraer' : 'Double tap to collapse') : (lang === 'es' ? 'Toca para expandir detalles' : 'Double tap to expand')}`}
+              accessibilityLabel={`${item.nombre}, ${tipo}, ${item.barrio}. ${isExpanded ? (lang === 'es' ? 'Toca para contraer' : lang === 'pt' ? 'Toque para recolher' : 'Double tap to collapse') : (lang === 'es' ? 'Toca para expandir detalles' : lang === 'pt' ? 'Toque para expandir detalhes' : 'Double tap to expand')}`}
             >
               <Card.Content style={styles.cardHeader}>
                 <View style={[styles.iconWrapper, { backgroundColor: theme.colors.background }]}>

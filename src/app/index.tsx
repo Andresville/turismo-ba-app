@@ -15,6 +15,10 @@ const traducciones = {
     descripcion: "Discover Buenos Aires your way...",
     btnComenzar: "Get Started",
   },
+  pt: {
+    descripcion: "Descubra Buenos Aires do seu jeito...",
+    btnComenzar: "Começar",
+  },
 };
 
 export default function SplashScreen() {
@@ -36,7 +40,11 @@ export default function SplashScreen() {
         />
 
         <Text style={styles.title}>
-          {lang === "en" ? "Buenos Aires\nTourism" : "Turismo\nBuenos Aires"}
+          {lang === "en"
+            ? "Buenos Aires\nTourism"
+            : lang === "pt"
+            ? "Turismo em\nBuenos Aires"
+            : "Turismo\nBuenos Aires"}
         </Text>
         <Text style={styles.tag}>{t.descripcion}</Text>
 
@@ -68,6 +76,21 @@ export default function SplashScreen() {
               ]}
             >
               English
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.langBtn, lang === "pt" && styles.langBtnActive]}
+            onPress={() => setLang("pt")}
+            activeOpacity={0.8}
+          >
+            <Text
+              style={[
+                styles.langText,
+                lang === "pt" && { color: theme.colors.primary },
+              ]}
+            >
+              Português
             </Text>
           </TouchableOpacity>
         </View>

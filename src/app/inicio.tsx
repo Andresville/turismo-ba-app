@@ -200,7 +200,11 @@ export default function InicioScreen() {
           />
           <View>
             <Text style={styles.chapaTitle}>
-              {lang === "en" ? "Buenos Aires Tourism" : "Turismo Buenos Aires"}
+              {lang === "en"
+                ? "Buenos Aires Tourism"
+                : lang === "pt"
+                ? "Turismo em Buenos Aires"
+                : "Turismo Buenos Aires"}
             </Text>
             <Text style={styles.chapaSub}>
               <Ionicons name="location-sharp" size={12} color="#C7D2E3" />

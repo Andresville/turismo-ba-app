@@ -23,39 +23,8 @@ import { useTranslation } from "../locales/i18n";
 import { Lugar } from "../types/database";
 import { offlineCache, OFFLINE_KEYS } from "../lib/offline-cache";
 import { OfflineBanner, ErrorState } from "../components/connection-status";
-
-const getDistanceSquared = (lat1: number, lon1: number, lat2: number, lon2: number) => {
-  const dLat = lat2 - lat1;
-  const dLon = lon2 - lon1;
-  return dLat * dLat + dLon * dLon;
-};
-
-const ordenarPorCercania = (puntos: any[], startLat: number, startLng: number): any[] => {
-  const result: any[] = [];
-  const pool = [...puntos];
-  let currentLat = startLat;
-  let currentLng = startLng;
-
-  while (pool.length > 0) {
-    let bestIndex = 0;
-    let bestDist = getDistanceSquared(currentLat, currentLng, pool[0].lat, pool[0].lng);
-
-    for (let i = 1; i < pool.length; i++) {
-      const dist = getDistanceSquared(currentLat, currentLng, pool[i].lat, pool[i].lng);
-      if (dist < bestDist) {
-        bestDist = dist;
-        bestIndex = i;
-      }
-    }
-
-    const nextPlace = pool.splice(bestIndex, 1)[0];
-    result.push(nextPlace);
-    currentLat = nextPlace.lat;
-    currentLng = nextPlace.lng;
-  }
-
-  return result;
-};
+import { ordenarPorCercania } from "../utils/geo";
+import { fetchWalkingRoute } from "../utils/routing";
 
 export default function MapaScreen() {
   const theme = useAppTheme();
@@ -108,27 +77,18 @@ export default function MapaScreen() {
   useEffect(() => {
     const fetchRuta = async () => {
       if (location && destinoActivo) {
-        try {
-          const originLon = location.coords.longitude;
-          const originLat = location.coords.latitude;
-          const destLon = destinoActivo.lng;
-          const destLat = destinoActivo.lat;
-
-          const url = `https://router.project-osrm.org/route/v1/foot/${originLon},${originLat};${destLon},${destLat}?overview=full&geometries=geojson`;
-
-          const response = await fetch(url);
-          const data = await response.json();
-
-          if (data.routes && data.routes.length > 0) {
-            const coords = data.routes[0].geometry.coordinates;
-            const formattedCoords = coords.map((c: [number, number]) => ({
-              latitude: c[1],
-              longitude: c[0],
-            }));
-            setRutaCaminando(formattedCoords);
-          }
-        } catch (error) {
-          console.error("Error al obtener la ruta peatonal:", error);
+        const coords = await fetchWalkingRoute([
+          { lat: location.coords.latitude, lng: location.coords.longitude },
+          { lat: destinoActivo.lat, lng: destinoActivo.lng },
+        ]);
+        if (coords) {
+          setRutaCaminando(coords);
+        } else {
+          // Fallback: línea recta si falla la API de ruteo
+          setRutaCaminando([
+            { latitude: location.coords.latitude, longitude: location.coords.longitude },
+            { latitude: destinoActivo.lat, longitude: destinoActivo.lng },
+          ]);
         }
       }
     };
@@ -206,36 +166,22 @@ export default function MapaScreen() {
   useEffect(() => {
     const fetchItineraryRoute = async () => {
       if (esItinerarioActivo && lugaresMostrados.length >= 2) {
-        try {
-          // 1. Obtener punto inicial (ubicación del usuario o Obelisco si no está disponible)
-          const startLat = location ? location.coords.latitude : -34.6037;
-          const startLng = location ? location.coords.longitude : -58.3816;
+        // 1. Obtener punto inicial (ubicación del usuario o Obelisco si no está disponible)
+        const startLat = location ? location.coords.latitude : -34.6037;
+        const startLng = location ? location.coords.longitude : -58.3816;
 
-          // 2. Ordenar por cercanía secuencial (vecino más cercano)
-          const ordenados = ordenarPorCercania(lugaresMostrados, startLat, startLng);
+        // 2. Ordenar por cercanía secuencial (vecino más cercano)
+        const ordenados = ordenarPorCercania(lugaresMostrados, startLat, startLng);
 
-          // Construye la lista de coordenadas para OSRM: lon1,lat1;lon2,lat2;lon3,lat3...
-          const coordsString = ordenados.map((l) => `${l.lng},${l.lat}`).join(";");
+        // 3. Pedir la ruta a pie real que conecta todos los puntos en ese orden
+        const coords = await fetchWalkingRoute(
+          ordenados.map((l) => ({ lat: l.lat, lng: l.lng }))
+        );
 
-          const url = `https://router.project-osrm.org/route/v1/foot/${coordsString}?overview=full&geometries=geojson`;
-
-          const response = await fetch(url);
-          const data = await response.json();
-
-          if (data.routes && data.routes.length > 0) {
-            const coords = data.routes[0].geometry.coordinates;
-            const formattedCoords = coords.map((c: [number, number]) => ({
-              latitude: c[1],
-              longitude: c[0],
-            }));
-            setLineaItinerarioCoords(formattedCoords);
-          }
-        } catch (error) {
-          console.error("Error al calcular ruta de itinerario real:", error);
+        if (coords) {
+          setLineaItinerarioCoords(coords);
+        } else {
           // Fallback: usar líneas rectas si la API falla
-          const startLat = location ? location.coords.latitude : -34.6037;
-          const startLng = location ? location.coords.longitude : -58.3816;
-          const ordenados = ordenarPorCercania(lugaresMostrados, startLat, startLng);
           setLineaItinerarioCoords(ordenados.map((l) => ({ latitude: l.lat, longitude: l.lng })));
         }
       } else {
@@ -358,7 +304,7 @@ export default function MapaScreen() {
                       longitude: Number(lugar.lng),
                     }}
                     title={lugar.nombre}
-                    description={lang === "es" ? "Ver detalle →" : "View details →"}
+                    description={lang === "es" ? "Ver detalle →" : lang === "pt" ? "Ver detalhes →" : "View details →"}
                     onCalloutPress={() => handleNavigateToDetail(lugar)}
                     pinColor={getCategoryColor(lugar.categoria)}
                   />

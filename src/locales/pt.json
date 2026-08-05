@@ -1,0 +1,117 @@
+{
+  "inicio": {
+    "ciudad": "Buenos Aires",
+    "ubicacionPrefix": "você está em",
+    "ubicacionDefault": "Buscando localização...",
+    "buscar": "Buscar lugar, comuna ou zona…",
+    "tabTuristico": "Turístico",
+    "tabResto": "Restaurantes",
+    "catTitulo": "Categorias",
+    "categorias": [
+      "Museus",
+      "Parques",
+      "Cúpulas",
+      "Edifícios",
+      "Teatros",
+      "Estádios",
+      "Zonas turísticas",
+      "Meu roteiro"
+    ],
+    "cercaTitulo": "Perto de você",
+    "resultadosBusqueda": "Resultados da busca",
+    "cargando": "Buscando lugares...",
+    "sinResultados": "Nenhum lugar encontrado.",
+    "nav": ["Início", "Mapa", "Transporte", "Restô", "Roteiro"]
+  },
+  "mapa": {
+    "titulo": "Mapa da cidade",
+    "subtitulo": "pontos de interesse",
+    "rutaHacia": "Rota até",
+    "itinerarioActivo": "Circuito do seu roteiro",
+    "cargando": "Carregando mapa...",
+    "verDetalle": "Ver detalhes →",
+    "comunas": [
+      "Todas as comunas",
+      "Comuna 1 (Centro/San Telmo)",
+      "Comuna 2 (Recoleta)",
+      "Comuna 3 (Balvanera/Abasto)",
+      "Comuna 4 (La Boca/Barracas)",
+      "Comuna 5 (Almagro/Boedo)",
+      "Comuna 6 (Caballito)",
+      "Comuna 7 (Flores)",
+      "Comuna 8 (Lugano)",
+      "Comuna 9 (Mataderos/Liniers)",
+      "Comuna 10 (Villa Luro)",
+      "Comuna 11 (Devoto)",
+      "Comuna 12 (Saavedra)",
+      "Comuna 13 (Belgrano/Núñez)",
+      "Comuna 14 (Palermo)",
+      "Comuna 15 (Villa Crespo/Chacarita)"
+    ]
+  },
+  "recorrido": {
+    "titulo": "Meu Roteiro",
+    "subtitulo": "Seu passaporte de viagem por Buenos Aires",
+    "vacioTitulo": "Seu passaporte está vazio",
+    "vacioDesc": "Explore os pontos de interesse da cidade e salve-os com o coração ❤️ para montar seu roteiro personalizado.",
+    "btnExplorar": "Buscar lugares",
+    "progreso": "Progresso do roteiro",
+    "verMapa": "Ver circuito no mapa",
+    "ordenSugerido": "Ordem sugerida para ir a pé",
+    "visitado": "VISITADO",
+    "selloFecha": "BA EXPRESS",
+    "comuna": "Comuna {c}",
+    "cargando": "Carregando roteiro..."
+  },
+  "restaurantes": {
+    "titulo": "Restaurantes",
+    "subtitulo": "Gastronomia recomendada da cidade",
+    "cargando": "Buscando restaurantes...",
+    "sinDatos": "Nenhum restaurante disponível.",
+    "michelin": "Estrela Michelin",
+    "bodegon": "Boteco Histórico",
+    "comuna": "Comuna {c}"
+  },
+  "alojamientos": {
+    "titulo": "Hospedagens",
+    "subtitulo": "Hotéis e hospedagens recomendados",
+    "filtroTodos": "Todos",
+    "filtroLujo": "Luxo",
+    "filtroBoutique": "Boutique",
+    "filtroHostel": "Hostel",
+    "comoLlegar": "Como chegar",
+    "llamar": "Ligar",
+    "sitioWeb": "Site",
+    "estrellas": "estrelas",
+    "precio": "Preço:",
+    "cargando": "Buscando hospedagens..."
+  },
+  "detalle": {
+    "fotoActual": "Atual",
+    "fotoAntigua": "Antiga",
+    "sinFoto": "Foto indisponível",
+    "descripcion": "Descrição",
+    "historia": "Resenha histórica",
+    "comoLlegar": "Como chegar",
+    "guardar": "Salvar",
+    "guardado": "Salvo",
+    "cercanos": "Lugares próximos",
+    "cargando": "Carregando informação..."
+  },
+  "detalleResto": {
+    "resena": "Resenha especial",
+    "direccion": "Endereço",
+    "comoLlegar": "Como chegar",
+    "guardar": "Salvar",
+    "guardado": "Salvo",
+    "cargando": "Carregando informação...",
+    "michelin": "Estrela Michelin",
+    "bodegon": "Boteco Histórico",
+    "comuna": "Comuna {c}"
+  },
+  "common": {
+    "noInternet": "Sem conexão à internet",
+    "reintentar": "Tentar novamente",
+    "datosGuardados": "Usando dados salvos (sem conexão)"
+  }
+}
