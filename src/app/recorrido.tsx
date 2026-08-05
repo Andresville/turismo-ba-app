@@ -12,6 +12,7 @@ import {
 import { ProgressBar, Text } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import AppLogo from "../components/AppLogo";
 import BottomNavBar from "../components/BottomNavBar";
 import { useItinerary } from "../context/ItineraryContext";
 import { useLocation } from "../context/LocationContext";
@@ -140,9 +141,12 @@ export default function RecorridoScreen() {
       <OfflineBanner isOffline={isOffline} />
       {/* Cabecera superior "Chapa" */}
       <View style={[styles.chapaBar, { backgroundColor: theme.colors.primary }]}>
-        <View>
-          <Text style={styles.chapaTitle}>{t("recorrido.titulo")}</Text>
-          <Text style={styles.chapaSub}>{t("recorrido.subtitulo")}</Text>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+          <AppLogo />
+          <View>
+            <Text style={styles.chapaTitle}>{t("recorrido.titulo")}</Text>
+            <Text style={styles.chapaSub}>{t("recorrido.subtitulo")}</Text>
+          </View>
         </View>
       </View>
 

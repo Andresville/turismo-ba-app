@@ -14,6 +14,7 @@ import MapView, { Marker, Callout, Polyline, PROVIDER_GOOGLE } from "react-nativ
 import { Text } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import AppLogo from "../components/AppLogo";
 import BottomNavBar from "../components/BottomNavBar";
 import { useItinerary } from "../context/ItineraryContext";
 import { useLocation } from "../context/LocationContext";
@@ -224,15 +225,18 @@ export default function MapaScreen() {
       <OfflineBanner isOffline={isOffline} />
       {/* Barra de cabecera "Chapa" */}
       <View style={[styles.chapaBar, { backgroundColor: theme.colors.primary }]}>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.chapaTitle}>{t("mapa.titulo")}</Text>
-          <Text style={styles.chapaSub} numberOfLines={1}>
-            {destinoActivo
-              ? `🚶 ${t("mapa.rutaHacia")} ${destinoActivo.nombre}`
-              : esItinerarioActivo
-                ? `⭐ ${t("mapa.itinerarioActivo")} (${lugaresMostrados.length})`
-                : `${lugaresMostrados.length} ${t("mapa.subtitulo")}`}
-          </Text>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 12, flex: 1 }}>
+          <AppLogo />
+          <View style={{ flex: 1 }}>
+            <Text style={styles.chapaTitle}>{t("mapa.titulo")}</Text>
+            <Text style={styles.chapaSub} numberOfLines={1}>
+              {destinoActivo
+                ? `🚶 ${t("mapa.rutaHacia")} ${destinoActivo.nombre}`
+                : esItinerarioActivo
+                  ? `⭐ ${t("mapa.itinerarioActivo")} (${lugaresMostrados.length})`
+                  : `${lugaresMostrados.length} ${t("mapa.subtitulo")}`}
+            </Text>
+          </View>
         </View>
       </View>
 

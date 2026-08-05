@@ -12,6 +12,7 @@ import { Card, Text } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Image } from "expo-image";
 
+import AppLogo from "../components/AppLogo";
 import BottomNavBar from "../components/BottomNavBar";
 import { supabase } from "../lib/supabase";
 import { useAppTheme } from "../theme/colors";
@@ -82,9 +83,12 @@ export default function RestaurantesScreen() {
       <OfflineBanner isOffline={isOffline} />
       {/* Cabecera superior "Chapa" */}
       <View style={[styles.chapaBar, { backgroundColor: theme.colors.primary }]}>
-        <View>
-          <Text style={styles.chapaTitle}>{t("restaurantes.titulo")}</Text>
-          <Text style={styles.chapaSub}>{t("restaurantes.subtitulo")}</Text>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+          <AppLogo />
+          <View>
+            <Text style={styles.chapaTitle}>{t("restaurantes.titulo")}</Text>
+            <Text style={styles.chapaSub}>{t("restaurantes.subtitulo")}</Text>
+          </View>
         </View>
       </View>
 

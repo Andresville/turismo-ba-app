@@ -21,6 +21,8 @@ export interface Lugar {
   curiosidades_en?: string;
   horarios_es?: string;
   horarios_en?: string;
+  subte_info?: string;
+  colectivos_info?: string;
 }
 
 export interface Restaurante {

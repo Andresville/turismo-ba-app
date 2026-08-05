@@ -17,6 +17,7 @@ import {
 import { Card, Text } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import AppLogo from "../components/AppLogo";
 import BottomNavBar from "../components/BottomNavBar";
 import { supabase } from "../lib/supabase";
 import { useAppTheme } from "../theme/colors";
@@ -130,9 +131,12 @@ export default function AlojamientosScreen() {
       <OfflineBanner isOffline={isOffline} />
       {/* Cabecera superior tipo "Chapa" */}
       <View style={[styles.chapaBar, { backgroundColor: theme.colors.primary }]}>
-        <View>
-          <Text style={styles.chapaTitle}>{t("alojamientos.titulo")}</Text>
-          <Text style={styles.chapaSub}>{t("alojamientos.subtitulo")}</Text>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+          <AppLogo />
+          <View>
+            <Text style={styles.chapaTitle}>{t("alojamientos.titulo")}</Text>
+            <Text style={styles.chapaSub}>{t("alojamientos.subtitulo")}</Text>
+          </View>
         </View>
       </View>
 

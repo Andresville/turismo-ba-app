@@ -20,6 +20,7 @@ import { useAppTheme, getCategoryIcon, getCategoryLabel } from "../theme/colors"
 import { useTranslation } from "../locales/i18n";
 import { Lugar } from "../types/database";
 import { offlineCache, OFFLINE_KEYS } from "../lib/offline-cache";
+import { getDistanceSquared } from "../utils/geo";
 
 export default function DetalleScreen() {
   const { id } = useLocalSearchParams();
@@ -62,8 +63,15 @@ export default function DetalleScreen() {
         const lugarData = allLugares.find((l) => l.id === id);
         if (lugarData) {
           setLugar(lugarData);
+          // Lugares realmente más cercanos por distancia (no por comuna, que
+          // puede ser una zona grande y no reflejar cercanía real a pie).
           const sugeridosData = allLugares
-            .filter((l) => l.comuna === lugarData.comuna && l.id !== id)
+            .filter((l) => l.id !== id && l.lat != null && l.lng != null)
+            .sort(
+              (a, b) =>
+                getDistanceSquared(lugarData.lat, lugarData.lng, a.lat, a.lng) -
+                getDistanceSquared(lugarData.lat, lugarData.lng, b.lat, b.lng)
+            )
             .slice(0, 3);
           setLugaresSugeridos(sugeridosData);
         }
@@ -415,6 +423,25 @@ export default function DetalleScreen() {
           </TouchableOpacity>
         </View>
 
+        {/* Transporte público cercano (Mejora 6) */}
+        {(lugar.subte_info || lugar.colectivos_info) && (
+          <View style={styles.descCard}>
+            <Text style={styles.descLabel}>{t("detalle.transporte")}</Text>
+            {lugar.subte_info && (
+              <View style={styles.transitRow}>
+                <Ionicons name="subway-outline" size={16} color={theme.colors.primary} />
+                <Text style={styles.transitText}>{lugar.subte_info}</Text>
+              </View>
+            )}
+            {lugar.colectivos_info && (
+              <View style={styles.transitRow}>
+                <Ionicons name="bus-outline" size={16} color={theme.colors.primary} />
+                <Text style={styles.transitText}>{lugar.colectivos_info}</Text>
+              </View>
+            )}
+          </View>
+        )}
+
         {lugaresSugeridos.length > 0 && (
           <>
             <Text style={styles.sectionLabel}>{t("detalle.cercanos")}</Text>
@@ -453,7 +480,7 @@ export default function DetalleScreen() {
                       {sug.nombre}
                     </Text>
                     <Text style={styles.sugType} numberOfLines={1}>
-                      {String(sug.categoria).toUpperCase()}
+                      {getCategoryLabel(sug.categoria, localLang).toUpperCase()}
                     </Text>
                   </View>
                 </TouchableOpacity>
@@ -576,6 +603,8 @@ const styles = StyleSheet.create({
     height: "100%",
   },
   descBody: { fontSize: 14, lineHeight: 22, color: "#1B2330" },
+  transitRow: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 8 },
+  transitText: { flex: 1, fontSize: 13, lineHeight: 18, color: "#1B2330" },
   actionRow: {
     flexDirection: "row",
     gap: 10,

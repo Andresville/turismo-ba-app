@@ -13,6 +13,7 @@ import {
 } from "react-native";
 import { Card, Text } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
+import AppLogo from "../components/AppLogo";
 import BottomNavBar from "../components/BottomNavBar";
 
 import { ErrorState, OfflineBanner } from "../components/connection-status";
@@ -22,6 +23,7 @@ import { supabase } from "../lib/supabase";
 import { useTranslation } from "../locales/i18n";
 import { getCategoryBadgeColors, getCategoryColor, getCategoryIcon, getCategoryLabel, useAppTheme } from "../theme/colors";
 import { Lugar } from "../types/database";
+import { normalizeForSearch } from "../utils/text";
 
 const DB_CATEGORIAS = [
   "Museos",
@@ -142,10 +144,10 @@ export default function InicioScreen() {
 
     // 2. Si el usuario escribió algo, buscamos texto (Muestra TODOS los coincidentes)
     if (searchQuery.trim().length > 0) {
-      const query = searchQuery.toLowerCase();
+      const query = normalizeForSearch(searchQuery);
       // Ordenamos alfabéticamente los resultados
       return listaConDistancia
-        .filter((l) => l.nombre.toLowerCase().includes(query))
+        .filter((l) => normalizeForSearch(l.nombre).includes(query))
         .sort((a, b) => a.nombre.localeCompare(b.nombre));
     }
 
@@ -194,10 +196,7 @@ export default function InicioScreen() {
         style={[styles.chapaBar, { backgroundColor: theme.colors.primary }]}
       >
         <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-          <Image
-            source={require("../../assets/images/icon.png")}
-            style={{ width: 42, height: 42, borderRadius: 10 }}
-          />
+          <AppLogo />
           <View>
             <Text style={styles.chapaTitle}>
               {lang === "en"
