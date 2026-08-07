@@ -1,9 +1,9 @@
 import React from "react";
 import { View, StyleSheet, TouchableOpacity, ActivityIndicator } from "react-native";
+import { Text } from "react-native-paper";
 import { Ionicons } from "@expo/vector-icons";
 import { useAppTheme } from "../theme/colors";
 import { useTranslation } from "../locales/i18n";
-import { ThemedText } from "./themed-text";
 
 interface OfflineBannerProps {
   isOffline: boolean;
@@ -18,9 +18,9 @@ export const OfflineBanner: React.FC<OfflineBannerProps> = ({ isOffline }) => {
   return (
     <View style={[styles.bannerContainer, { backgroundColor: theme.colors.tertiary }]}>
       <Ionicons name="cloud-offline-outline" size={16} color="#fff" style={styles.bannerIcon} />
-      <ThemedText style={styles.bannerText}>
+      <Text style={styles.bannerText}>
         {t("common.datosGuardados")}
-      </ThemedText>
+      </Text>
     </View>
   );
 };
@@ -43,13 +43,13 @@ export const ErrorState: React.FC<ErrorStateProps> = ({ message, onRetry, loadin
         color={theme.colors.textSecondary}
         style={styles.errorIcon}
       />
-      <ThemedText type="subtitle" style={styles.errorTitle}>
+      <Text style={[styles.errorTitle, { color: theme.colors.text }]}>
         {t("common.noInternet")}
-      </ThemedText>
+      </Text>
       {message && (
-        <ThemedText style={[styles.errorDesc, { color: theme.colors.textSecondary }]}>
+        <Text style={[styles.errorDesc, { color: theme.colors.textSecondary }]}>
           {message}
-        </ThemedText>
+        </Text>
       )}
       <TouchableOpacity
         style={[styles.retryButton, { backgroundColor: theme.colors.primary }]}
@@ -61,9 +61,9 @@ export const ErrorState: React.FC<ErrorStateProps> = ({ message, onRetry, loadin
         ) : (
           <>
             <Ionicons name="refresh-outline" size={16} color="#fff" style={styles.buttonIcon} />
-            <ThemedText style={styles.retryButtonText}>
+            <Text style={styles.retryButtonText}>
               {t("common.reintentar")}
-            </ThemedText>
+            </Text>
           </>
         )}
       </TouchableOpacity>

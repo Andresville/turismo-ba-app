@@ -96,6 +96,10 @@
     "guardar": "Save",
     "guardado": "Saved",
     "transporte": "Public transport",
+    "escuchar": "Listen to review",
+    "detener": "Stop",
+    "audioSub": "In your device's voice",
+    "reproduciendo": "Playing...",
     "cercanos": "Nearby places",
     "cargando": "Loading information..."
   },

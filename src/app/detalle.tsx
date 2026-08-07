@@ -12,6 +12,7 @@ import MapView, { Marker } from "react-native-maps";
 import { Text } from "react-native-paper";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { Image } from "expo-image";
+import * as Speech from "expo-speech";
 
 import BottomNavBar from "../components/BottomNavBar";
 import { useItinerary } from "../context/ItineraryContext";
@@ -38,11 +39,24 @@ export default function DetalleScreen() {
   const [loading, setLoading] = useState(true);
   const [fotoVista, setFotoVista] = useState<"actual" | "antigua">("actual");
   const [localLang, setLocalLang] = useState(lang);
+  const [isSpeaking, setIsSpeaking] = useState(false);
 
   useEffect(() => {
     // Sincronizar localLang cuando cambie la global
     setLocalLang(lang);
   }, [lang]);
+
+  // Cortar la audioguía si cambia el idioma mostrado, el lugar, o se sale de la pantalla
+  useEffect(() => {
+    Speech.stop();
+    setIsSpeaking(false);
+  }, [localLang, id]);
+
+  useEffect(() => {
+    return () => {
+      Speech.stop();
+    };
+  }, []);
 
   useEffect(() => {
     const fetchDetalle = async () => {
@@ -119,6 +133,38 @@ export default function DetalleScreen() {
   const iconName = getCategoryIcon(lugar.categoria);
   const tieneAmbasFotos = !!(lugar.foto_actual_url && lugar.foto_antigua_url);
   const fotoUrlAMostrar = tieneAmbasFotos ? (fotoVista === "actual" ? lugar.foto_actual_url : lugar.foto_antigua_url) : (lugar.foto_actual_url || lugar.foto_antigua_url);
+
+  const descripcionMostrada =
+    localLang === "es"
+      ? lugar.descripcion_es
+      : localLang === "pt"
+      ? lugar.descripcion_pt || lugar.descripcion_es
+      : lugar.descripcion_en;
+  const historiaMostrada =
+    localLang === "es"
+      ? lugar.historia_es
+      : localLang === "pt"
+      ? lugar.historia_pt || lugar.historia_es
+      : lugar.historia_en;
+
+  const SPEECH_LANG: Record<string, string> = { es: "es-AR", en: "en-US", pt: "pt-BR" };
+
+  const toggleAudioguia = () => {
+    if (isSpeaking) {
+      Speech.stop();
+      setIsSpeaking(false);
+      return;
+    }
+    const texto = [descripcionMostrada, historiaMostrada].filter(Boolean).join(". ");
+    if (!texto) return;
+    Speech.speak(texto, {
+      language: SPEECH_LANG[localLang] || "es-AR",
+      onStart: () => setIsSpeaking(true),
+      onDone: () => setIsSpeaking(false),
+      onStopped: () => setIsSpeaking(false),
+      onError: () => setIsSpeaking(false),
+    });
+  };
 
   return (
     <SafeAreaView
@@ -339,23 +385,56 @@ export default function DetalleScreen() {
               </TouchableOpacity>
             </View>
           </View>
-          <Text style={styles.descBody}>
-            {localLang === "es"
-              ? lugar.descripcion_es
-              : localLang === "pt"
-              ? lugar.descripcion_pt || lugar.descripcion_es
-              : lugar.descripcion_en}
-          </Text>
+
+          {/* Audioguía (Mejora 3): lee Descripción + Historia con la voz del dispositivo */}
+          <TouchableOpacity
+            style={[
+              styles.audioBar,
+              isSpeaking
+                ? { backgroundColor: theme.colors.primary, borderColor: theme.colors.primary }
+                : { backgroundColor: "#F4F7FC", borderColor: theme.colors.border },
+            ]}
+            onPress={toggleAudioguia}
+            activeOpacity={0.85}
+            accessible={true}
+            accessibilityRole="button"
+            accessibilityLabel={isSpeaking ? t("detalle.detener") : t("detalle.escuchar")}
+          >
+            <View
+              style={[
+                styles.audioIconCircle,
+                { backgroundColor: isSpeaking ? "rgba(255,255,255,0.2)" : theme.colors.primary },
+              ]}
+            >
+              <Ionicons name={isSpeaking ? "stop" : "play"} size={14} color="#fff" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text
+                style={[
+                  styles.audioBarTitle,
+                  { color: isSpeaking ? "#fff" : theme.colors.text },
+                ]}
+              >
+                {isSpeaking ? t("detalle.detener") : t("detalle.escuchar")}
+              </Text>
+              <Text
+                style={[
+                  styles.audioBarSub,
+                  { color: isSpeaking ? "rgba(255,255,255,0.75)" : theme.colors.textSecondary },
+                ]}
+              >
+                {isSpeaking ? t("detalle.reproduciendo") : t("detalle.audioSub")}
+              </Text>
+            </View>
+          </TouchableOpacity>
+
+          <Text style={styles.descBody}>{descripcionMostrada}</Text>
         </View>
 
         <View style={styles.descCard}>
           <Text style={styles.descLabel}>{t("detalle.historia")}</Text>
           <Text style={[styles.descBody, { marginTop: 8 }]}>
-            {localLang === "es"
-              ? lugar.historia_es
-              : localLang === "pt"
-              ? lugar.historia_pt || lugar.historia_es
-              : lugar.historia_en}
+            {historiaMostrada}
           </Text>
         </View>
 
@@ -603,6 +682,24 @@ const styles = StyleSheet.create({
     height: "100%",
   },
   descBody: { fontSize: 14, lineHeight: 22, color: "#1B2330" },
+  audioBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    marginBottom: 12,
+    padding: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  audioIconCircle: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  audioBarTitle: { fontSize: 13, fontWeight: "bold" },
+  audioBarSub: { fontSize: 10.5, marginTop: 1 },
   transitRow: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 8 },
   transitText: { flex: 1, fontSize: 13, lineHeight: 18, color: "#1B2330" },
   actionRow: {

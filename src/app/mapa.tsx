@@ -74,7 +74,7 @@ export default function MapaScreen() {
     }
   }, [destinoLat, destinoLng, destinoNombre]);
 
-  // 2. Calcular ruta peatonal OSRM
+  // 2. Calcular ruta peatonal (OpenRouteService)
   useEffect(() => {
     const fetchRuta = async () => {
       if (location && destinoActivo) {
@@ -151,7 +151,11 @@ export default function MapaScreen() {
   // Filtrado inteligente
   const lugaresMostrados = useMemo(() => {
     if (destinoActivo) {
-      return lugares.filter((l) => l.nombre === destinoActivo.nombre);
+      // El destino puntual se dibuja aparte (ver Marker dedicado más abajo):
+      // buscarlo por nombre en "lugares" era frágil (podía matchear el lugar
+      // equivocado, o ninguno si venía de un alojamiento, que ni siquiera se
+      // carga en esta pantalla).
+      return [];
     }
     if (esItinerarioActivo) {
       // Filtrar únicamente los puntos que están guardados en el itinerario
@@ -297,6 +301,21 @@ export default function MapaScreen() {
               initialRegion={regionInicial}
               showsUserLocation={!!location}
             >
+              {/* Marcador del destino puntual (Modo "Cómo llegar"), armado directo
+                  a partir de los parámetros de navegación, sin depender de que el
+                  lugar exista en las listas cargadas acá (los alojamientos, por
+                  ejemplo, no se cargan en esta pantalla) */}
+              {destinoActivo && (
+                <Marker
+                  coordinate={{
+                    latitude: destinoActivo.lat,
+                    longitude: destinoActivo.lng,
+                  }}
+                  title={destinoActivo.nombre}
+                  pinColor={theme.colors.secondary}
+                />
+              )}
+
               {/* Renderizado de marcadores */}
               {lugaresMostrados.map((lugar) => {
                 if (!lugar.lat || !lugar.lng) return null;

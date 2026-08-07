@@ -96,6 +96,10 @@
     "guardar": "Guardar",
     "guardado": "Guardado",
     "transporte": "Transporte público",
+    "escuchar": "Escuchar reseña",
+    "detener": "Detener",
+    "audioSub": "Con la voz de tu dispositivo",
+    "reproduciendo": "Reproduciendo...",
     "cercanos": "Lugares cercanos",
     "cargando": "Cargando información..."
   },

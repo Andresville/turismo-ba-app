@@ -1,3 +1,4 @@
+import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import React from "react";
@@ -5,6 +6,12 @@ import { Platform, StyleSheet, TouchableOpacity, View } from "react-native";
 import { Text, useTheme } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useLang } from "../context/LangContext";
+
+const IDIOMAS = [
+  { code: "es" as const, flag: "🇦🇷", label: "Español" },
+  { code: "en" as const, flag: "🇺🇸", label: "English" },
+  { code: "pt" as const, flag: "🇧🇷", label: "Português" },
+];
 
 const traducciones = {
   es: {
@@ -48,51 +55,39 @@ export default function SplashScreen() {
         </Text>
         <Text style={styles.tag}>{t.descripcion}</Text>
 
-        <View style={styles.langPick}>
-          <TouchableOpacity
-            style={[styles.langBtn, lang === "es" && styles.langBtnActive]}
-            onPress={() => setLang("es")}
-            activeOpacity={0.8}
-          >
-            <Text
-              style={[
-                styles.langText,
-                lang === "es" && { color: theme.colors.primary },
-              ]}
-            >
-              Español
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.langBtn, lang === "en" && styles.langBtnActive]}
-            onPress={() => setLang("en")}
-            activeOpacity={0.8}
-          >
-            <Text
-              style={[
-                styles.langText,
-                lang === "en" && { color: theme.colors.primary },
-              ]}
-            >
-              English
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.langBtn, lang === "pt" && styles.langBtnActive]}
-            onPress={() => setLang("pt")}
-            activeOpacity={0.8}
-          >
-            <Text
-              style={[
-                styles.langText,
-                lang === "pt" && { color: theme.colors.primary },
-              ]}
-            >
-              Português
-            </Text>
-          </TouchableOpacity>
+        <View style={styles.langList}>
+          {IDIOMAS.map((idioma) => {
+            const isActive = lang === idioma.code;
+            return (
+              <TouchableOpacity
+                key={idioma.code}
+                style={[styles.langRow, isActive && styles.langRowActive]}
+                onPress={() => setLang(idioma.code)}
+                activeOpacity={0.8}
+                accessible={true}
+                accessibilityRole="radio"
+                accessibilityState={{ checked: isActive }}
+                accessibilityLabel={idioma.label}
+              >
+                <View style={styles.langRowLeft}>
+                  <Text style={styles.langFlag}>{idioma.flag}</Text>
+                  <Text
+                    style={[
+                      styles.langRowText,
+                      isActive && { color: theme.colors.primary },
+                    ]}
+                  >
+                    {idioma.label}
+                  </Text>
+                </View>
+                <Ionicons
+                  name={isActive ? "checkmark-circle" : "ellipse-outline"}
+                  size={22}
+                  color={isActive ? theme.colors.primary : "rgba(255,255,255,0.35)"}
+                />
+              </TouchableOpacity>
+            );
+          })}
         </View>
 
         <TouchableOpacity
@@ -138,27 +133,36 @@ const styles = StyleSheet.create({
     lineHeight: 24,
     marginBottom: 48,
   },
-  langPick: {
-    flexDirection: "row",
+  langList: {
     width: "100%",
-    gap: 12,
-    marginBottom: 24,
+    gap: 10,
+    marginBottom: 28,
   },
-  langBtn: {
-    flex: 1,
-    paddingVertical: 14,
-    borderRadius: 24,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.25)",
-    backgroundColor: "rgba(255,255,255,0.08)",
+  langRow: {
+    flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
+    justifyContent: "space-between",
+    width: "100%",
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.22)",
+    backgroundColor: "rgba(255,255,255,0.06)",
   },
-  langBtnActive: {
+  langRowActive: {
     backgroundColor: "#ffffff",
     borderColor: "#ffffff",
   },
-  langText: {
+  langRowLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  langFlag: {
+    fontSize: 20,
+  },
+  langRowText: {
     color: "#ffffff",
     fontSize: 15,
     fontWeight: "700",
