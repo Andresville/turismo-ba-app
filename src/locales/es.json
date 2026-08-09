@@ -73,8 +73,8 @@
     "comuna": "Comuna {c}"
   },
   "alojamientos": {
-    "titulo": "Alojamientos",
-    "subtitulo": "Hoteles y hospedajes recomendados",
+    "titulo": "Reservas",
+    "subtitulo": "Vuelos, hospedaje y tu itinerario",
     "filtroTodos": "Todos",
     "filtroLujo": "Lujo",
     "filtroBoutique": "Boutique",
@@ -84,7 +84,48 @@
     "sitioWeb": "Sitio Web",
     "estrellas": "estrellas",
     "precio": "Precio:",
-    "cargando": "Buscando alojamientos..."
+    "cargando": "Buscando alojamientos...",
+    "tabs": {
+      "alojamiento": "Alojamiento",
+      "vuelos": "Vuelos",
+      "itinerario": "Itinerario IA"
+    },
+    "vuelos": {
+      "desdeBA": "Desde Buenos Aires",
+      "haciaBA": "Hacia Buenos Aires",
+      "elegirDestino": "Elegí tu próxima escapada",
+      "elegirOrigen": "Elegí tu ciudad de origen",
+      "buscarPlaceholder": "Buscar cualquier destino o ciudad...",
+      "populares": "O elegí uno popular",
+      "buscando": "Buscando...",
+      "desde": "Desde",
+      "escalas": "escalas",
+      "sinEscalas": "directo",
+      "verAviasales": "Ver en Aviasales",
+      "cargando": "Buscando vuelos...",
+      "sinResultados": "No encontramos vuelos por ahora. Probá con otro destino.",
+      "error": "No pudimos buscar vuelos. Probá de nuevo."
+    },
+    "itinerario": {
+      "cuantosDias": "¿Cuántos días estás en Buenos Aires?",
+      "dias": "días",
+      "estilo": "Elegí tu estilo de viaje",
+      "estilos": {
+        "familiar": "Familiar",
+        "cultural": "Cultural",
+        "gastronomico": "Gastronómico",
+        "bajoPresupuesto": "Bajo presupuesto",
+        "aventura": "Aventura"
+      },
+      "generar": "Generar itinerario con IA",
+      "generando": "Armando tu itinerario...",
+      "guardarRecorrido": "Guardar en Mi Recorrido",
+      "guardado": "Guardado en Mi Recorrido",
+      "rateLimited": "El asistente está muy solicitado, probá en un minuto.",
+      "error": "No pudimos generar el itinerario. Probá de nuevo.",
+      "sinResultados": "No pudimos armar un itinerario con esos filtros.",
+      "eligeEstilo": "Elegí al menos un estilo de viaje"
+    }
   },
   "detalle": {
     "fotoActual": "Actual",

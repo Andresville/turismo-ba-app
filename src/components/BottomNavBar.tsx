@@ -12,13 +12,13 @@ interface BottomNavBarProps {
 
 const traducciones = {
   es: {
-    nav: ["Inicio", "Mapa", "Alojamientos", "Resto", "Recorrido"],
+    nav: ["Inicio", "Mapa", "Reservas", "Resto", "Recorrido"],
   },
   en: {
-    nav: ["Home", "Map", "Lodging", "Dining", "Itinerary"],
+    nav: ["Home", "Map", "Book", "Dining", "Itinerary"],
   },
   pt: {
-    nav: ["Início", "Mapa", "Hospedagem", "Restô", "Roteiro"],
+    nav: ["Início", "Mapa", "Reservas", "Restô", "Roteiro"],
   },
 };
 

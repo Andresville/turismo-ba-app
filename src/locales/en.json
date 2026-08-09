@@ -73,8 +73,8 @@
     "comuna": "Commune {c}"
   },
   "alojamientos": {
-    "titulo": "Lodgings",
-    "subtitulo": "Recommended hotels and accommodations",
+    "titulo": "Book",
+    "subtitulo": "Flights, lodging and your itinerary",
     "filtroTodos": "All",
     "filtroLujo": "Luxury",
     "filtroBoutique": "Boutique",
@@ -84,7 +84,48 @@
     "sitioWeb": "Website",
     "estrellas": "stars",
     "precio": "Price:",
-    "cargando": "Finding lodgings..."
+    "cargando": "Finding lodgings...",
+    "tabs": {
+      "alojamiento": "Lodging",
+      "vuelos": "Flights",
+      "itinerario": "AI Itinerary"
+    },
+    "vuelos": {
+      "desdeBA": "From Buenos Aires",
+      "haciaBA": "To Buenos Aires",
+      "elegirDestino": "Pick your next getaway",
+      "elegirOrigen": "Pick your city of origin",
+      "buscarPlaceholder": "Search any destination or city...",
+      "populares": "Or pick a popular one",
+      "buscando": "Searching...",
+      "desde": "From",
+      "escalas": "stops",
+      "sinEscalas": "direct",
+      "verAviasales": "View on Aviasales",
+      "cargando": "Searching flights...",
+      "sinResultados": "We couldn't find flights right now. Try another destination.",
+      "error": "We couldn't search flights. Please try again."
+    },
+    "itinerario": {
+      "cuantosDias": "How many days are you in Buenos Aires?",
+      "dias": "days",
+      "estilo": "Pick your travel style",
+      "estilos": {
+        "familiar": "Family",
+        "cultural": "Cultural",
+        "gastronomico": "Food & Dining",
+        "bajoPresupuesto": "Budget",
+        "aventura": "Adventure"
+      },
+      "generar": "Generate AI itinerary",
+      "generando": "Building your itinerary...",
+      "guardarRecorrido": "Save to My Itinerary",
+      "guardado": "Saved to My Itinerary",
+      "rateLimited": "The assistant is in high demand, try again in a minute.",
+      "error": "We couldn't generate the itinerary. Please try again.",
+      "sinResultados": "We couldn't build an itinerary with those filters.",
+      "eligeEstilo": "Pick at least one travel style"
+    }
   },
   "detalle": {
     "fotoActual": "Current",
