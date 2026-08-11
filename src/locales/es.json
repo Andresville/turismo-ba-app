@@ -13,7 +13,6 @@
       "Cúpulas",
       "Edificios",
       "Teatros",
-      "Estadios",
       "Zonas turísticas",
       "Deportes",
       "Mi recorrido"
@@ -119,11 +118,13 @@
       "dias": "días",
       "estilo": "Elegí tu estilo de viaje",
       "estilos": {
-        "familiar": "Familiar",
         "cultural": "Cultural",
         "gastronomico": "Gastronómico",
         "bajoPresupuesto": "Bajo presupuesto",
-        "aventura": "Aventura"
+        "aventura": "Aventura",
+        "deportivo": "Deportivo",
+        "aireLibre": "Aire libre",
+        "museos": "Museos"
       },
       "generar": "Generar itinerario con IA",
       "generando": "Armando tu itinerario...",

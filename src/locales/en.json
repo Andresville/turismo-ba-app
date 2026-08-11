@@ -13,7 +13,6 @@
       "Domes",
       "Buildings",
       "Theaters",
-      "Stadiums",
       "Tourist Zones",
       "Sports",
       "My Itinerary"
@@ -119,11 +118,13 @@
       "dias": "days",
       "estilo": "Pick your travel style",
       "estilos": {
-        "familiar": "Family",
         "cultural": "Cultural",
         "gastronomico": "Food & Dining",
         "bajoPresupuesto": "Budget",
-        "aventura": "Adventure"
+        "aventura": "Adventure",
+        "deportivo": "Sports",
+        "aireLibre": "Outdoors",
+        "museos": "Museums"
       },
       "generar": "Generate AI itinerary",
       "generando": "Building your itinerary...",

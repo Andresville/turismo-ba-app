@@ -434,7 +434,6 @@ export default function MapaScreen() {
                 "Parques",
                 "Museos",
                 "Teatros",
-                "Canchas de futbol",
                 "Zonas turisticas",
                 "Cupulas",
                 "Deportes",

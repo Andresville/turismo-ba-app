@@ -28,7 +28,6 @@ export const getCategoryLabel = (categoria: string, lang: string) => {
       case "Cupulas": return "Dome";
       case "Edificios historicos": return "Historic Building";
       case "Teatros": return "Theater";
-      case "Canchas de futbol": return "Stadium";
       case "Zonas turisticas": return "Tourist Zone";
       case "Deportes": return "Sports";
       case "Restaurantes": return "Restaurant";
@@ -41,7 +40,6 @@ export const getCategoryLabel = (categoria: string, lang: string) => {
       case "Cupulas": return "Cúpula";
       case "Edificios historicos": return "Edifício Histórico";
       case "Teatros": return "Teatro";
-      case "Canchas de futbol": return "Estádio";
       case "Zonas turisticas": return "Zona Turística";
       case "Deportes": return "Esportes";
       case "Restaurantes": return "Restaurante";
@@ -49,7 +47,6 @@ export const getCategoryLabel = (categoria: string, lang: string) => {
     }
   } else {
     switch (categoria) {
-      case "Canchas de futbol": return "Estadio";
       case "Cupulas": return "Cúpula";
       case "Edificios historicos": return "Edificio Histórico";
       case "Zonas turisticas": return "Zona Turística";
@@ -70,14 +67,22 @@ export const getCategoryColor = (categoria: string) => {
       return "#1F4778";
     case "Teatros":
       return "#7C5FA8";
-    case "Canchas de futbol":
-      return "#71ad5eff";
     case "Zonas turisticas":
       return "#E0A23A";
     case "Cupulas":
       return "#11afa5ff";
     case "Deportes":
-      return "#3E7CB1";
+      // Ojo con este color: los pines nativos de Android (Marker
+      // `pinColor`) solo usan el matiz (hue) en HSV, no el RGB completo, así
+      // que dos colores "distintos" a la vista pueden pintar el mismo pin si
+      // su matiz queda cerca. Ya pasó dos veces: #3E7CB1 (~207°) casi
+      // idéntico al ~213° de "Edificios historicos", y después #B33A6B
+      // (~336°) demasiado cerca del ~16° de "Museos" (la zona roja/magenta
+      // se lee parecida en el pin aunque el hex sea distinto). Este verde
+      // lima queda en ~90°, en el hueco más grande y lejano de matiz entre
+      // todas las demás categorías (52° de Parques y de Zonas turísticas,
+      // mucho más de los demás).
+      return "#86BF4C";
     case "Restaurantes":
       return "#C9542A";
     default:
@@ -115,8 +120,6 @@ export const getCategoryIcon = (categoria: string) => {
       return "business";
     case "Teatros":
       return "ticket";
-    case "Canchas de futbol":
-      return "football";
     case "Zonas turisticas":
       return "map";
     case "Cupulas":
@@ -140,14 +143,12 @@ export const getCategoryBadgeColors = (categoria: string) => {
       return { bg: "#E8F0FE", text: "#1F4778", border: "#C6DAFC" };
     case "Teatros":
       return { bg: "#F3E8FD", text: "#7C5FA8", border: "#E1BEE7" };
-    case "Canchas de futbol":
-      return { bg: "#E8F5E9", text: "#71ad5e", border: "#C8E6C9" };
     case "Zonas turisticas":
       return { bg: "#FFF8E1", text: "#D48D00", border: "#FFE082" };
     case "Cupulas":
       return { bg: "#E0F2F1", text: "#11afa5", border: "#B2DFDB" };
     case "Deportes":
-      return { bg: "#E6F0F9", text: "#3E7CB1", border: "#B9D4EB" };
+      return { bg: "#F0F7E2", text: "#5B8C2A", border: "#CBE3A0" };
     case "Restaurantes":
       return { bg: "#FCE8E6", text: "#C9542A", border: "#F5B4AD" };
     default:

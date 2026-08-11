@@ -9,11 +9,13 @@ const GEMINI_MODEL = "gemini-3.5-flash";
 const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
 
 const ESTILOS_VALIDOS = [
-  "familiar",
   "cultural",
   "gastronomico",
   "bajo_presupuesto",
   "aventura",
+  "deportivo",
+  "aire_libre",
+  "museos",
 ];
 
 const PROMPT_INTRO: Record<string, string> = {
@@ -24,25 +26,68 @@ const PROMPT_INTRO: Record<string, string> = {
 
 const ESTILO_LABELS: Record<string, Record<string, string>> = {
   es: {
-    familiar: "familiar",
     cultural: "cultural",
     gastronomico: "gastronómico",
     bajo_presupuesto: "bajo presupuesto",
     aventura: "aventura",
+    deportivo: "deportivo",
+    aire_libre: "aire libre",
+    museos: "museos",
   },
   en: {
-    familiar: "family-friendly",
     cultural: "cultural",
     gastronomico: "food & dining",
     bajo_presupuesto: "budget",
     aventura: "adventure",
+    deportivo: "sports",
+    aire_libre: "outdoors",
+    museos: "museums",
   },
   pt: {
-    familiar: "família",
     cultural: "cultural",
     gastronomico: "gastronômico",
     bajo_presupuesto: "baixo orçamento",
     aventura: "aventura",
+    deportivo: "esportivo",
+    aire_libre: "ao ar livre",
+    museos: "museus",
+  },
+};
+
+// Instrucción extra por estilo, para que el modelo no tenga que adivinar qué
+// categoría privilegiar solo a partir de la etiqueta. La categoría de cada
+// lugar viaja en el listado tal cual está en la base (en español, sin
+// traducir), así que estas pistas referencian los nombres literales
+// ("Deportes", "Parques", etc.) sin importar el idioma de respuesta.
+// "cultural" y "gastronomico" quedan sin pista: cultural ya es amplio de por
+// sí (museos, teatros, edificios históricos, cúpulas), y gastronómico no
+// tiene con qué reforzarse porque los restaurantes no viajan en este listado
+// (solo se consulta puntos_interes, no restaurantes).
+const STYLE_HINTS: Record<string, Record<string, string>> = {
+  deportivo: {
+    es: 'Priorizá los lugares con categoría "Deportes" (estadios, autódromo, velódromo, clubes, hipódromo, campo de polo).',
+    en: 'Prioritize places with category "Deportes" (stadiums, racetrack, velodrome, sports clubs, hippodrome, polo field).',
+    pt: 'Priorize os lugares com categoria "Deportes" (estádios, autódromo, velódromo, clubes, hipódromo, campo de polo).',
+  },
+  aire_libre: {
+    es: 'Priorizá los lugares con categoría "Parques" (plazas, jardines, reservas) para pasar el día al aire libre.',
+    en: 'Prioritize places with category "Parques" (squares, gardens, reserves) to spend the day outdoors.',
+    pt: 'Priorize os lugares com categoria "Parques" (praças, jardins, reservas) para passar o dia ao ar livre.',
+  },
+  museos: {
+    es: 'Priorizá los lugares con categoría "Museos" para armar un recorrido centrado en museos.',
+    en: 'Prioritize places with category "Museos" to build a museum-focused route.',
+    pt: 'Priorize os lugares com categoria "Museos" para montar um roteiro focado em museus.',
+  },
+  bajo_presupuesto: {
+    es: 'Priorizá lugares gratuitos o de bajo costo, como los de categoría "Parques" y "Zonas turisticas" (plazas, ferias, paseos al aire libre), por sobre museos o atracciones pagas.',
+    en: 'Prioritize free or low-cost places, such as those in the "Parques" and "Zonas turisticas" categories (squares, fairs, outdoor walks), over paid museums or attractions.',
+    pt: 'Priorize lugares gratuitos ou de baixo custo, como os das categorias "Parques" e "Zonas turisticas" (praças, feiras, passeios ao ar livre), em vez de museus ou atrações pagas.',
+  },
+  aventura: {
+    es: 'Priorizá lugares para actividad física y al aire libre, como los de categoría "Parques" (Reserva Ecológica, Jardín Botánico) y "Deportes" (velódromo, autódromo, clubes).',
+    en: 'Prioritize places for physical, outdoor activity, such as those in the "Parques" (Ecological Reserve, Botanical Garden) and "Deportes" (velodrome, racetrack, sports clubs) categories.',
+    pt: 'Priorize lugares para atividade física e ao ar livre, como os das categorias "Parques" (Reserva Ecológica, Jardim Botânico) e "Deportes" (velódromo, autódromo, clubes).',
   },
 };
 
@@ -147,7 +192,11 @@ Deno.serve(async (req: Request) => {
       .map((s) => ESTILO_LABELS[lang]?.[s] ?? s)
       .join(", ");
 
-    const promptText = `${PROMPT_INTRO[lang]}\n\nDías: ${days}\nEstilo de viaje: ${estilosTexto}\n\nLugares disponibles:\n${listado}`;
+    const hints = styles
+      .map((s) => STYLE_HINTS[s]?.[lang])
+      .filter((h): h is string => Boolean(h));
+    const hint = hints.length > 0 ? `\n\n${hints.join(" ")}` : "";
+    const promptText = `${PROMPT_INTRO[lang]}\n\nDías: ${days}\nEstilo de viaje: ${estilosTexto}${hint}\n\nLugares disponibles:\n${listado}`;
 
     const geminiRes = await fetch(GEMINI_URL, {
       method: "POST",

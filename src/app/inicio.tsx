@@ -31,7 +31,6 @@ const DB_CATEGORIAS = [
   "Cupulas",
   "Edificios historicos",
   "Teatros",
-  "Canchas de futbol",
   "Zonas turisticas",
   "Deportes",
   "recorrido",
@@ -90,8 +89,8 @@ export default function InicioScreen() {
     "business-outline",
     "business",
     "ticket-outline",
-    "football-outline",
     "map-outline",
+    "trophy-outline",
     "trail-sign-outline",
   ];
 
@@ -167,12 +166,12 @@ export default function InicioScreen() {
   }, [lugaresBd, categoriaFiltro, searchQuery, location]);
 
   const handleCategoriaPress = (index: number) => {
-    if (index === 7) {
+    const dbCat = DB_CATEGORIAS[index];
+    if (dbCat === "recorrido") {
       router.push("/recorrido" as any);
       return;
     }
 
-    const dbCat = DB_CATEGORIAS[index];
     setCategoriaFiltro((prev) => (prev === dbCat ? null : dbCat));
     setSearchQuery(""); // Limpiamos la búsqueda si toca una categoría
     Keyboard.dismiss();

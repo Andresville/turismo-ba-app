@@ -21,11 +21,13 @@ import { ItineraryDay } from "../../types/travel";
 import { Lugar } from "../../types/database";
 
 const ESTILOS = [
-  { code: "familiar", key: "familiar" },
   { code: "cultural", key: "cultural" },
   { code: "gastronomico", key: "gastronomico" },
   { code: "bajo_presupuesto", key: "bajoPresupuesto" },
   { code: "aventura", key: "aventura" },
+  { code: "deportivo", key: "deportivo" },
+  { code: "aire_libre", key: "aireLibre" },
+  { code: "museos", key: "museos" },
 ] as const;
 
 const COOLDOWN_MS = 15000;
