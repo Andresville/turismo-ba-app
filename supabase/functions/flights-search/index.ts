@@ -39,20 +39,15 @@ function defaultDepartDateDDMM(): string {
   return `${dd}${mm}`;
 }
 
-interface CheapOption {
+interface CheapEntry {
   price: number;
-  airline: string;
-  flightNumber: string;
   departureAt: string;
-  returnAt: string | null;
-  transfers: number;
-  expiresAt: string;
 }
 
 // La respuesta de /v1/prices/cheap viene agrupada de forma variable
 // (a veces un array, a veces anidada por aerolínea) — se normaliza de forma
 // defensiva en vez de asumir una única forma.
-function normalizeCheapOptions(json: any): CheapOption[] {
+function normalizeCheapEntries(json: any): CheapEntry[] {
   const data = json?.data;
   if (!data) return [];
   const entries: any[] = Array.isArray(data)
@@ -62,17 +57,7 @@ function normalizeCheapOptions(json: any): CheapOption[] {
       );
   return entries
     .filter((e) => e && typeof e === "object" && typeof e.price === "number")
-    .sort((a, b) => a.price - b.price)
-    .slice(0, 5)
-    .map((e) => ({
-      price: e.price,
-      airline: e.airline ?? "",
-      flightNumber: e.flight_number != null ? String(e.flight_number) : "",
-      departureAt: e.departure_at ?? "",
-      returnAt: e.return_at ?? null,
-      transfers: e.transfers ?? 0,
-      expiresAt: e.expires_at ?? "",
-    }));
+    .map((e) => ({ price: e.price, departureAt: e.departure_at ?? "" }));
 }
 
 Deno.serve(async (req: Request) => {
@@ -114,38 +99,36 @@ Deno.serve(async (req: Request) => {
       fetchWithTimeout(cheapUrl),
     ]);
 
-    let latest: {
-      price: number;
-      currency: string;
-      departDate: string;
-      returnDate: string | null;
-      transfers: number;
-      foundAt: string;
-    } | null = null;
+    // Se combinan las dos fuentes en UN solo precio de referencia (el más
+    // bajo de las dos), en vez de mostrar dos números sin relación entre sí
+    // (eso era lo confuso: dos cachés distintos, de fechas distintas,
+    // presentados como si fueran un mismo resultado).
+    let bestPrice: number | null = null;
+    let bestDate: string | null = null;
 
     if (latestRes.status === "fulfilled" && latestRes.value.ok) {
       const json = await latestRes.value.json();
       const entries: any[] = Array.isArray(json?.data) ? json.data : [];
       if (entries.length > 0) {
         const best = entries.reduce((min, e) => (e.value < min.value ? e : min), entries[0]);
-        latest = {
-          price: best.value,
-          currency: "USD",
-          departDate: best.depart_date ?? "",
-          returnDate: best.return_date ?? null,
-          transfers: best.number_of_changes ?? 0,
-          foundAt: best.found_at ?? "",
-        };
+        bestPrice = best.value;
+        bestDate = best.depart_date ?? null;
       }
     }
 
-    let cheapOptions: CheapOption[] = [];
     if (cheapRes.status === "fulfilled" && cheapRes.value.ok) {
       const json = await cheapRes.value.json();
-      cheapOptions = normalizeCheapOptions(json);
+      const cheapEntries = normalizeCheapEntries(json);
+      if (cheapEntries.length > 0) {
+        const cheapest = cheapEntries.reduce((min, e) => (e.price < min.price ? e : min), cheapEntries[0]);
+        if (bestPrice === null || cheapest.price < bestPrice) {
+          bestPrice = cheapest.price;
+          bestDate = cheapest.departureAt ? cheapest.departureAt.slice(0, 10) : null;
+        }
+      }
     }
 
-    if (!latest && cheapOptions.length === 0) {
+    if (bestPrice === null) {
       const bothFailed = latestRes.status === "rejected" && cheapRes.status === "rejected";
       if (bothFailed) {
         return jsonResponse({
@@ -164,7 +147,7 @@ Deno.serve(async (req: Request) => {
     // el marker al abrirse (probado con curl: redirige a la home en ruso
     // sin parámetros) — por eso más abajo se pasa por la API de Enlaces de
     // Travelpayouts, que es quien realmente arma el link trackeado.
-    const departToken = latest?.departDate ? toDDMM(latest.departDate) : defaultDepartDateDDMM();
+    const departToken = bestDate ? toDDMM(bestDate) : defaultDepartDateDDMM();
     const searchToken = `${origin}${departToken}${destination}1`;
     const innerUrl = `https://www.aviasales.com/search/${searchToken}?locale=${locale}`;
 
@@ -204,7 +187,7 @@ Deno.serve(async (req: Request) => {
 
     return jsonResponse({
       success: true,
-      data: { latest, cheapOptions, deepLink },
+      data: { price: bestPrice, currency: "USD", approxDate: bestDate, deepLink },
     });
   } catch (e) {
     return jsonResponse({

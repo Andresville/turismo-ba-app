@@ -98,9 +98,16 @@ export default function ItinerarioIATab() {
 
   const handleGuardarTodo = () => {
     if (!itinerary) return;
-    const allIds = Array.from(new Set(itinerary.flatMap((d) => d.paradas.map((p) => p.poi_id))));
-    allIds.forEach((id) => {
-      if (!isSaved(id)) toggleItem(id);
+    // Un mismo poi_id podría repetirse entre días (caso raro); se queda con
+    // el primer día en que aparece.
+    const dayByPoi = new Map<string, number>();
+    itinerary.forEach((day) => {
+      day.paradas.forEach((parada) => {
+        if (!dayByPoi.has(parada.poi_id)) dayByPoi.set(parada.poi_id, day.dia);
+      });
+    });
+    dayByPoi.forEach((day, id) => {
+      if (!isSaved(id)) toggleItem(id, day);
     });
     setSavedAll(true);
   };

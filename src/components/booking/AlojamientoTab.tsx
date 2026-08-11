@@ -16,6 +16,7 @@ import {
 } from "react-native";
 import { Card, Text } from "react-native-paper";
 
+import { getHotelLink } from "../../lib/edge-functions";
 import { supabase } from "../../lib/supabase";
 import { useAppTheme } from "../../theme/colors";
 import { useTranslation } from "../../locales/i18n";
@@ -42,6 +43,7 @@ export default function AlojamientoTab() {
   const [errorLoading, setErrorLoading] = useState(false);
   const [filtroActivo, setFiltroActivo] = useState<"todos" | "lujo" | "boutique" | "hostel">("todos");
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [buscandoHoteles, setBuscandoHoteles] = useState(false);
 
   const fetchAlojamientos = async () => {
     setLoading(true);
@@ -99,6 +101,21 @@ export default function AlojamientoTab() {
         },
       ]
     );
+  };
+
+  const handleBuscarHoteles = async () => {
+    if (buscandoHoteles) return;
+    setBuscandoHoteles(true);
+    try {
+      const result = await getHotelLink({ lang });
+      if (result.success) {
+        await handleWebPress(result.data.deepLink);
+      } else {
+        await handleWebPress("https://www.aviasales.com/hotels");
+      }
+    } finally {
+      setBuscandoHoteles(false);
+    }
   };
 
   const handleMapPress = (item: Alojamiento) => {
@@ -275,6 +292,35 @@ export default function AlojamientoTab() {
         </Card>
       );
     }))}
+
+        {!loading && (
+          <View style={[styles.ctaCard, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
+            <Ionicons name="search-outline" size={20} color={theme.colors.primary} />
+            <Text style={styles.ctaTitle}>{t("alojamientos.masHoteles.titulo")}</Text>
+            <Text style={styles.ctaSubtitle}>{t("alojamientos.masHoteles.subtitulo")}</Text>
+            <TouchableOpacity
+              style={[styles.btnOutline, { borderColor: theme.colors.primary, alignSelf: "stretch" }]}
+              onPress={handleBuscarHoteles}
+              activeOpacity={0.8}
+              disabled={buscandoHoteles}
+              accessible={true}
+              accessibilityRole="button"
+              accessibilityLabel={t("alojamientos.masHoteles.boton")}
+            >
+              {buscandoHoteles ? (
+                <ActivityIndicator size="small" color={theme.colors.primary} />
+              ) : (
+                <>
+                  <Ionicons name="open-outline" size={14} color={theme.colors.primary} />
+                  <Text style={[styles.btnOutlineText, { color: theme.colors.primary }]}>
+                    {t("alojamientos.masHoteles.boton")}
+                  </Text>
+                </>
+              )}
+            </TouchableOpacity>
+          </View>
+        )}
+
     <View style={{ height: 24 }} />
       </ScrollView>
     </>
@@ -407,5 +453,26 @@ const styles = StyleSheet.create({
   btnOutlineText: {
     fontSize: 11.5,
     fontWeight: "bold",
+  },
+  ctaCard: {
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 16,
+    marginTop: 4,
+    marginBottom: 12,
+    alignItems: "center",
+    gap: 6,
+  },
+  ctaTitle: {
+    fontSize: 13.5,
+    fontWeight: "bold",
+    color: "#1B2330",
+    textAlign: "center",
+  },
+  ctaSubtitle: {
+    fontSize: 11.5,
+    color: "#5B6270",
+    textAlign: "center",
+    marginBottom: 6,
   },
 });

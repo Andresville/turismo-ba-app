@@ -30,6 +30,7 @@ export const getCategoryLabel = (categoria: string, lang: string) => {
       case "Teatros": return "Theater";
       case "Canchas de futbol": return "Stadium";
       case "Zonas turisticas": return "Tourist Zone";
+      case "Deportes": return "Sports";
       case "Restaurantes": return "Restaurant";
       default: return categoria;
     }
@@ -42,6 +43,7 @@ export const getCategoryLabel = (categoria: string, lang: string) => {
       case "Teatros": return "Teatro";
       case "Canchas de futbol": return "Estádio";
       case "Zonas turisticas": return "Zona Turística";
+      case "Deportes": return "Esportes";
       case "Restaurantes": return "Restaurante";
       default: return categoria;
     }
@@ -51,6 +53,7 @@ export const getCategoryLabel = (categoria: string, lang: string) => {
       case "Cupulas": return "Cúpula";
       case "Edificios historicos": return "Edificio Histórico";
       case "Zonas turisticas": return "Zona Turística";
+      case "Deportes": return "Deportes";
       case "Restaurantes": return "Restaurante";
       default: return categoria;
     }
@@ -73,12 +76,34 @@ export const getCategoryColor = (categoria: string) => {
       return "#E0A23A";
     case "Cupulas":
       return "#11afa5ff";
+    case "Deportes":
+      return "#3E7CB1";
     case "Restaurantes":
       return "#C9542A";
     default:
       return "#5B6270";
   }
 };
+
+// Paleta para distinguir, en el mapa, las rutas de cada día de un itinerario
+// IA (una polyline y sus marcadores por día, todos del mismo color) — se
+// repite en ciclo si hubiera más de 7 días, aunque el stepper de días hoy
+// tope en 7.
+const DAY_COLORS = [
+  "#C9542A", // terracota
+  "#0A398A", // azul-buenos-aires
+  "#3F6B4F", // verde-parque
+  "#7C5FA8", // violeta
+  "#E0A23A", // mostaza
+  "#11A5A0", // teal
+  "#A83232", // rojo ladrillo
+];
+
+export const getDayColor = (day: number) => DAY_COLORS[(day - 1) % DAY_COLORS.length];
+
+// Color neutro para lugares guardados a mano (sin día asignado) cuando
+// conviven con rutas de itinerario IA en el mapa.
+export const OTROS_LUGARES_COLOR = "#5B6270";
 
 export const getCategoryIcon = (categoria: string) => {
   switch (categoria) {
@@ -96,6 +121,8 @@ export const getCategoryIcon = (categoria: string) => {
       return "map";
     case "Cupulas":
       return "business-outline";
+    case "Deportes":
+      return "trophy";
     case "Restaurantes":
       return "restaurant";
     default:
@@ -119,6 +146,8 @@ export const getCategoryBadgeColors = (categoria: string) => {
       return { bg: "#FFF8E1", text: "#D48D00", border: "#FFE082" };
     case "Cupulas":
       return { bg: "#E0F2F1", text: "#11afa5", border: "#B2DFDB" };
+    case "Deportes":
+      return { bg: "#E6F0F9", text: "#3E7CB1", border: "#B9D4EB" };
     case "Restaurantes":
       return { bg: "#FCE8E6", text: "#C9542A", border: "#F5B4AD" };
     default:

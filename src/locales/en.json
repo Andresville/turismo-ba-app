@@ -15,6 +15,7 @@
       "Theaters",
       "Stadiums",
       "Tourist Zones",
+      "Sports",
       "My Itinerary"
     ],
     "cercaTitulo": "Near you",
@@ -58,6 +59,8 @@
     "progreso": "Itinerary Progress",
     "verMapa": "View circuit on map",
     "ordenSugerido": "Suggested walking order",
+    "diaLabel": "Day {d}",
+    "otrosLugares": "Other saved places",
     "visitado": "VISITED",
     "selloFecha": "BA EXPRESS",
     "comuna": "Commune {c}",
@@ -85,6 +88,11 @@
     "estrellas": "stars",
     "precio": "Price:",
     "cargando": "Finding lodgings...",
+    "masHoteles": {
+      "titulo": "Didn't find what you were looking for?",
+      "subtitulo": "Search thousands of other hotels.",
+      "boton": "Search more hotels on Aviasales"
+    },
     "tabs": {
       "alojamiento": "Lodging",
       "vuelos": "Flights",
@@ -99,9 +107,9 @@
       "populares": "Or pick a popular one",
       "buscando": "Searching...",
       "desde": "From",
-      "escalas": "stops",
-      "sinEscalas": "direct",
-      "verAviasales": "View on Aviasales",
+      "fechaAprox": "Reference price for nearby dates",
+      "disclaimer": "Approximate price based on recent data. Final fare and dates are confirmed on Aviasales.",
+      "buscarAviasales": "Search on Aviasales",
       "cargando": "Searching flights...",
       "sinResultados": "We couldn't find flights right now. Try another destination.",
       "error": "We couldn't search flights. Please try again."

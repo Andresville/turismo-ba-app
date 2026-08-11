@@ -19,7 +19,7 @@ import BottomNavBar from "../components/BottomNavBar";
 import { useItinerary } from "../context/ItineraryContext";
 import { useLocation } from "../context/LocationContext";
 import { supabase } from "../lib/supabase";
-import { getCategoryColor, getCategoryIcon, getCategoryLabel, useAppTheme } from "../theme/colors";
+import { getCategoryColor, getCategoryIcon, getCategoryLabel, getDayColor, OTROS_LUGARES_COLOR, useAppTheme } from "../theme/colors";
 import { useTranslation } from "../locales/i18n";
 import { Lugar } from "../types/database";
 import { offlineCache, OFFLINE_KEYS } from "../lib/offline-cache";
@@ -34,7 +34,7 @@ export default function MapaScreen() {
 
   const { destinoLat, destinoLng, destinoNombre, mostrarItinerario } = useLocalSearchParams();
   const { location } = useLocation();
-  const { savedItems } = useItinerary();
+  const { savedItems, dayMap } = useItinerary();
 
   const handleNavigateToDetail = (lugar: any) => {
     if (!lugar || !lugar.id) return;
@@ -57,7 +57,7 @@ export default function MapaScreen() {
     nombre: string;
   } | null>(null);
   const [rutaCaminando, setRutaCaminando] = useState<{ latitude: number; longitude: number }[]>([]);
-  const [lineaItinerarioCoords, setLineaItinerarioCoords] = useState<{ latitude: number; longitude: number }[]>([]);
+  const [rutasPorGrupo, setRutasPorGrupo] = useState<Record<string, { latitude: number; longitude: number }[]>>({});
 
   // 1. Inicializar Modo Ruta si venimos de un detalle
   useEffect(() => {
@@ -167,35 +167,90 @@ export default function MapaScreen() {
     return lugares.filter((l) => l.comuna === comunaActiva && l.categoria !== "Restaurantes");
   }, [lugares, destinoActivo, esItinerarioActivo, savedItems, comunaActiva]);
 
-  // 4. Calcular ruta real a pie calle por calle para el itinerario conectado
+  // 4. Agrupar el itinerario activo por día (mismo criterio que la pantalla
+  // de Recorrido): cada día del itinerario IA es su propio grupo, con su
+  // propio color; los guardados a mano sin día quedan en un grupo "Otros".
+  // Cada grupo se ordena por cercanía a pie de forma independiente, sin
+  // encadenarse con los demás días.
+  const gruposItinerario = useMemo(() => {
+    if (!esItinerarioActivo) return [];
+    const startLat = location ? location.coords.latitude : -34.6037;
+    const startLng = location ? location.coords.longitude : -58.3816;
+
+    const conDia = lugaresMostrados.filter((l) => dayMap[l.id] != null);
+    const sinDia = lugaresMostrados.filter((l) => dayMap[l.id] == null);
+
+    const porDia = new Map<number, any[]>();
+    conDia.forEach((l) => {
+      const dia = dayMap[l.id];
+      if (!porDia.has(dia)) porDia.set(dia, []);
+      porDia.get(dia)!.push(l);
+    });
+
+    const grupos = Array.from(porDia.entries())
+      .sort(([a], [b]) => a - b)
+      .map(([dia, items]) => ({
+        key: `dia-${dia}`,
+        dia: dia as number | null,
+        color: getDayColor(dia),
+        lugares: ordenarPorCercania(items, startLat, startLng),
+      }));
+
+    if (sinDia.length > 0) {
+      grupos.push({
+        key: "sueltos",
+        dia: null,
+        color: OTROS_LUGARES_COLOR,
+        lugares: ordenarPorCercania(sinDia, startLat, startLng),
+      });
+    }
+
+    return grupos;
+  }, [esItinerarioActivo, lugaresMostrados, dayMap, location]);
+
+  // Color de cada marcador según el grupo/día al que pertenece, para que la
+  // línea y los pines del mismo día se lean como un mismo recorrido.
+  const colorPorLugarId = useMemo(() => {
+    const map: Record<string, string> = {};
+    gruposItinerario.forEach((g) => {
+      g.lugares.forEach((l: any) => {
+        map[l.id] = g.color;
+      });
+    });
+    return map;
+  }, [gruposItinerario]);
+
+  // 5. Calcular la ruta real a pie calle por calle, una por cada grupo/día,
+  // para que los recorridos queden desconectados entre sí en el mapa.
   useEffect(() => {
-    const fetchItineraryRoute = async () => {
-      if (esItinerarioActivo && lugaresMostrados.length >= 2) {
-        // 1. Obtener punto inicial (ubicación del usuario o Obelisco si no está disponible)
-        const startLat = location ? location.coords.latitude : -34.6037;
-        const startLng = location ? location.coords.longitude : -58.3816;
+    let cancelled = false;
 
-        // 2. Ordenar por cercanía secuencial (vecino más cercano)
-        const ordenados = ordenarPorCercania(lugaresMostrados, startLat, startLng);
-
-        // 3. Pedir la ruta a pie real que conecta todos los puntos en ese orden
-        const coords = await fetchWalkingRoute(
-          ordenados.map((l) => ({ lat: l.lat, lng: l.lng }))
-        );
-
-        if (coords) {
-          setLineaItinerarioCoords(coords);
-        } else {
-          // Fallback: usar líneas rectas si la API falla
-          setLineaItinerarioCoords(ordenados.map((l) => ({ latitude: l.lat, longitude: l.lng })));
-        }
-      } else {
-        setLineaItinerarioCoords([]);
+    const fetchRutas = async () => {
+      if (gruposItinerario.length === 0) {
+        setRutasPorGrupo({});
+        return;
       }
+
+      const entries = await Promise.all(
+        gruposItinerario
+          .filter((g) => g.lugares.length >= 2)
+          .map(async (g) => {
+            const coords = await fetchWalkingRoute(
+              g.lugares.map((l: any) => ({ lat: l.lat, lng: l.lng }))
+            );
+            const fallback = g.lugares.map((l: any) => ({ latitude: l.lat, longitude: l.lng }));
+            return [g.key, coords || fallback] as const;
+          })
+      );
+
+      if (!cancelled) setRutasPorGrupo(Object.fromEntries(entries));
     };
 
-    fetchItineraryRoute();
-  }, [esItinerarioActivo, lugaresMostrados, savedItems, location]);
+    fetchRutas();
+    return () => {
+      cancelled = true;
+    };
+  }, [gruposItinerario]);
 
   // Calcular región del mapa inicial
   const regionInicial = useMemo(() => {
@@ -329,7 +384,7 @@ export default function MapaScreen() {
                     title={lugar.nombre}
                     description={lang === "es" ? "Ver detalle →" : lang === "pt" ? "Ver detalhes →" : "View details →"}
                     onCalloutPress={() => handleNavigateToDetail(lugar)}
-                    pinColor={getCategoryColor(lugar.categoria)}
+                    pinColor={esItinerarioActivo ? (colorPorLugarId[lugar.id] || OTROS_LUGARES_COLOR) : getCategoryColor(lugar.categoria)}
                   />
                 );
               })}
@@ -343,34 +398,52 @@ export default function MapaScreen() {
                 />
               )}
 
-              {/* Dibujar ruta del itinerario conectando marcadores */}
-              {lineaItinerarioCoords.length > 0 && (
-                <Polyline
-                  coordinates={lineaItinerarioCoords}
-                  strokeColor={theme.colors.secondary}
-                  strokeWidth={4.5}
-                />
-              )}
+              {/* Dibujar una ruta independiente por cada día del itinerario
+                  (o por el grupo "Otros" de guardados sin día), cada una con
+                  su propio color, sin conectarse entre sí */}
+              {esItinerarioActivo && gruposItinerario.map((g) => {
+                const coords = rutasPorGrupo[g.key];
+                if (!coords || coords.length < 2) return null;
+                return (
+                  <Polyline
+                    key={g.key}
+                    coordinates={coords}
+                    strokeColor={g.color}
+                    strokeWidth={4.5}
+                  />
+                );
+              })}
             </MapView>
           )}
         </View>
 
-        {/* Leyenda del Mapa Dinámica */}
+        {/* Leyenda del Mapa Dinámica: colores por día en modo itinerario,
+            colores por categoría en el resto de los modos */}
         <View style={styles.mapLegend}>
-          {[
-            "Edificios historicos",
-            "Parques",
-            "Museos",
-            "Teatros",
-            "Canchas de futbol",
-            "Zonas turisticas",
-            "Cupulas",
-          ].map((cat) => (
-            <View key={cat} style={styles.legendItem}>
-              <View style={[styles.legendDot, { backgroundColor: getCategoryColor(cat) }]} />
-              <Text style={styles.legendText}>{getCategoryLabel(cat, lang)}</Text>
-            </View>
-          ))}
+          {esItinerarioActivo
+            ? gruposItinerario.map((g) => (
+                <View key={g.key} style={styles.legendItem}>
+                  <View style={[styles.legendDot, { backgroundColor: g.color }]} />
+                  <Text style={styles.legendText}>
+                    {g.dia != null ? t("recorrido.diaLabel", { d: g.dia }) : t("recorrido.otrosLugares")}
+                  </Text>
+                </View>
+              ))
+            : [
+                "Edificios historicos",
+                "Parques",
+                "Museos",
+                "Teatros",
+                "Canchas de futbol",
+                "Zonas turisticas",
+                "Cupulas",
+                "Deportes",
+              ].map((cat) => (
+                <View key={cat} style={styles.legendItem}>
+                  <View style={[styles.legendDot, { backgroundColor: getCategoryColor(cat) }]} />
+                  <Text style={styles.legendText}>{getCategoryLabel(cat, lang)}</Text>
+                </View>
+              ))}
         </View>
         </View>
       )}

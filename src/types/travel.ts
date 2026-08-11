@@ -21,28 +21,20 @@ export interface FlightsSearchRequest {
   lang: "es" | "en" | "pt"; // idioma del deep link de Aviasales
 }
 
-export interface FlightLatestFare {
+export interface FlightsSearchData {
   price: number;
   currency: string;
-  departDate: string;
-  returnDate: string | null;
-  transfers: number;
-  foundAt: string;
+  approxDate: string | null;
+  deepLink: string;
 }
 
-export interface FlightCheapOption {
-  price: number;
-  airline: string;
-  flightNumber: string;
-  departureAt: string;
-  returnAt: string | null;
-  transfers: number;
-  expiresAt: string;
+// ---------- hotel-link ----------
+
+export interface HotelLinkRequest {
+  lang: "es" | "en" | "pt";
 }
 
-export interface FlightsSearchData {
-  latest: FlightLatestFare | null;
-  cheapOptions: FlightCheapOption[];
+export interface HotelLinkData {
   deepLink: string;
 }
 

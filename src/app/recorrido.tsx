@@ -33,7 +33,7 @@ export default function RecorridoScreen() {
   const { t, lang } = useTranslation();
   const router = useRouter();
 
-  const { savedItems, toggleItem } = useItinerary();
+  const { savedItems, dayMap, toggleItem } = useItinerary();
   const { location } = useLocation();
   const [lugares, setLugares] = useState<Lugar[]>([]);
   const [visitedItems, setVisitedItems] = useState<string[]>([]);
@@ -100,14 +100,35 @@ export default function RecorridoScreen() {
     return lugares.filter((l) => savedItems.includes(l.id));
   }, [lugares, savedItems]);
 
-  // 4. Ordenar los lugares guardados por cercanía a pie (vecino más cercano),
-  // arrancando desde la ubicación del usuario si está disponible, para que el
-  // recorrido no zigzaguee entre puntos lejanos y cercanos.
-  const lugaresOrdenados = useMemo(() => {
+  // 4. Agrupar los lugares guardados: los que vienen de un itinerario IA
+  // guardado de una vez se muestran separados por día (dayMap), el resto
+  // (guardados a mano con el corazón) van en una sección aparte. Dentro de
+  // cada grupo se ordenan por cercanía a pie (vecino más cercano),
+  // arrancando desde la ubicación del usuario si está disponible, para que
+  // el recorrido no zigzaguee entre puntos lejanos y cercanos.
+  const { gruposPorDia, sueltos } = useMemo(() => {
     const startLat = location ? location.coords.latitude : OBELISCO_LAT;
     const startLng = location ? location.coords.longitude : OBELISCO_LNG;
-    return ordenarPorCercania(lugaresGuardados, startLat, startLng);
-  }, [lugaresGuardados, location]);
+
+    const conDia = lugaresGuardados.filter((l) => dayMap[l.id] != null);
+    const sinDia = lugaresGuardados.filter((l) => dayMap[l.id] == null);
+
+    const porDia = new Map<number, Lugar[]>();
+    conDia.forEach((l) => {
+      const dia = dayMap[l.id];
+      if (!porDia.has(dia)) porDia.set(dia, []);
+      porDia.get(dia)!.push(l);
+    });
+
+    const gruposPorDia = Array.from(porDia.entries())
+      .sort(([a], [b]) => a - b)
+      .map(([dia, items]) => ({
+        dia,
+        lugares: ordenarPorCercania(items, startLat, startLng),
+      }));
+
+    return { gruposPorDia, sueltos: ordenarPorCercania(sinDia, startLat, startLng) };
+  }, [lugaresGuardados, dayMap, location]);
 
   const toggleVisited = async (id: string) => {
     let newList = [...visitedItems];
@@ -134,6 +155,92 @@ export default function RecorridoScreen() {
       pathname: "/mapa",
       params: { mostrarItinerario: "true" },
     });
+  };
+
+  const renderLugar = (lugar: Lugar, index: number) => {
+    const visited = isVisited(lugar.id);
+    return (
+      <View
+        key={lugar.id}
+        style={[
+          styles.placeRow,
+          { backgroundColor: theme.colors.surface, borderColor: theme.colors.border },
+        ]}
+      >
+        {/* Checkbox circular: muestra el orden de la parada, y el visto al marcarla */}
+        <TouchableOpacity
+          style={[
+            styles.checkbox,
+            { borderColor: theme.colors.primary },
+            visited && { backgroundColor: theme.colors.primary },
+          ]}
+          onPress={() => toggleVisited(lugar.id)}
+          activeOpacity={0.7}
+          accessible={true}
+          accessibilityRole="checkbox"
+          accessibilityState={{ checked: visited }}
+          accessibilityLabel={lang === 'es'
+            ? `Parada ${index + 1}. Marcar ${lugar.nombre} como visitado`
+            : lang === 'pt'
+            ? `Parada ${index + 1}. Marcar ${lugar.nombre} como visitado`
+            : `Stop ${index + 1}. Mark ${lugar.nombre} as visited`}
+        >
+          {visited ? (
+            <Ionicons name="checkmark" size={14} color="#fff" />
+          ) : (
+            <Text style={[styles.checkboxOrderText, { color: theme.colors.primary }]}>
+              {index + 1}
+            </Text>
+          )}
+        </TouchableOpacity>
+
+        {/* Información del lugar */}
+        <TouchableOpacity
+          style={styles.placeInfo}
+          activeOpacity={0.8}
+          onPress={() => router.push({ pathname: lugar.categoria === "Restaurantes" ? "/detalle-resto" as any : "/detalle" as any, params: { id: lugar.id } })}
+          accessible={true}
+          accessibilityRole="link"
+          accessibilityLabel={`${lugar.nombre}, ${getCategoryLabel(lugar.categoria, lang)}. ${lang === 'es' ? 'Toca para ver detalles' : lang === 'pt' ? 'Toque para ver detalhes' : 'Double tap to view details'}`}
+        >
+          <Text style={[styles.placeName, visited && styles.textLineThrough]} numberOfLines={1}>
+            {lugar.nombre}
+          </Text>
+          <Text style={styles.placeCat} numberOfLines={1}>
+            {getCategoryLabel(lugar.categoria, lang).toUpperCase()} · {t("recorrido.comuna", { c: lugar.comuna })}
+          </Text>
+        </TouchableOpacity>
+
+        {/* Sello de pasaporte digital si está visitado */}
+        {visited && (
+          <View style={[styles.passportStamp, { borderColor: theme.colors.secondary }]}>
+            <Text style={[styles.stampTextMain, { color: theme.colors.secondary }]}>
+              {t("recorrido.visitado")}
+            </Text>
+            <Text style={[styles.stampTextSub, { color: theme.colors.secondary }]}>
+              {t("recorrido.selloFecha")}
+            </Text>
+          </View>
+        )}
+
+        {/* Botón de eliminar del itinerario */}
+        <TouchableOpacity
+          style={styles.deleteBtn}
+          onPress={() => toggleItem(lugar.id)}
+          activeOpacity={0.7}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          accessible={true}
+          accessibilityRole="button"
+          accessibilityLabel={lang === 'es'
+            ? `Eliminar ${lugar.nombre} del recorrido`
+            : lang === 'pt'
+            ? `Remover ${lugar.nombre} do roteiro`
+            : `Remove ${lugar.nombre} from itinerary`}
+        >
+          <Ionicons name="trash-outline" size={17} color="#A83232" />
+        </TouchableOpacity>
+      </View>
+    );
   };
 
   return (
@@ -203,97 +310,35 @@ export default function RecorridoScreen() {
             </TouchableOpacity>
           </View>
 
-          {/* Listado de lugares en orden sugerido para ir a pie */}
+          {/* Listado de lugares, separado por día si vienen de un itinerario IA */}
           <ScrollView style={styles.scrollArea} showsVerticalScrollIndicator={false}>
-            <Text style={[styles.comunaLabel, { color: theme.colors.textSecondary }]}>
-              {t("recorrido.ordenSugerido")}
-            </Text>
-
-            {lugaresOrdenados.map((lugar, index) => {
-              const visited = isVisited(lugar.id);
-              return (
-                <View
-                  key={lugar.id}
-                  style={[
-                    styles.placeRow,
-                    { backgroundColor: theme.colors.surface, borderColor: theme.colors.border },
-                  ]}
-                >
-                  {/* Checkbox circular: muestra el orden de la parada, y el visto al marcarla */}
-                  <TouchableOpacity
-                    style={[
-                      styles.checkbox,
-                      { borderColor: theme.colors.primary },
-                      visited && { backgroundColor: theme.colors.primary },
-                    ]}
-                    onPress={() => toggleVisited(lugar.id)}
-                    activeOpacity={0.7}
-                    accessible={true}
-                    accessibilityRole="checkbox"
-                    accessibilityState={{ checked: visited }}
-                    accessibilityLabel={lang === 'es'
-                      ? `Parada ${index + 1}. Marcar ${lugar.nombre} como visitado`
-                      : lang === 'pt'
-                      ? `Parada ${index + 1}. Marcar ${lugar.nombre} como visitado`
-                      : `Stop ${index + 1}. Mark ${lugar.nombre} as visited`}
-                  >
-                    {visited ? (
-                      <Ionicons name="checkmark" size={14} color="#fff" />
-                    ) : (
-                      <Text style={[styles.checkboxOrderText, { color: theme.colors.primary }]}>
-                        {index + 1}
-                      </Text>
-                    )}
-                  </TouchableOpacity>
-
-                  {/* Información del lugar */}
-                  <TouchableOpacity
-                    style={styles.placeInfo}
-                    activeOpacity={0.8}
-                    onPress={() => router.push({ pathname: lugar.categoria === "Restaurantes" ? "/detalle-resto" as any : "/detalle" as any, params: { id: lugar.id } })}
-                    accessible={true}
-                    accessibilityRole="link"
-                    accessibilityLabel={`${lugar.nombre}, ${getCategoryLabel(lugar.categoria, lang)}. ${lang === 'es' ? 'Toca para ver detalles' : lang === 'pt' ? 'Toque para ver detalhes' : 'Double tap to view details'}`}
-                  >
-                    <Text style={[styles.placeName, visited && styles.textLineThrough]} numberOfLines={1}>
-                      {lugar.nombre}
+            {gruposPorDia.length > 0 ? (
+              <>
+                {gruposPorDia.map((grupo) => (
+                  <View key={grupo.dia}>
+                    <Text style={[styles.dayGroupLabel, { color: theme.colors.secondary }]}>
+                      {t("recorrido.diaLabel", { d: grupo.dia })}
                     </Text>
-                    <Text style={styles.placeCat} numberOfLines={1}>
-                      {getCategoryLabel(lugar.categoria, lang).toUpperCase()} · {t("recorrido.comuna", { c: lugar.comuna })}
+                    {grupo.lugares.map((lugar, index) => renderLugar(lugar, index))}
+                  </View>
+                ))}
+                {sueltos.length > 0 && (
+                  <View>
+                    <Text style={[styles.dayGroupLabel, { color: theme.colors.textSecondary }]}>
+                      {t("recorrido.otrosLugares")}
                     </Text>
-                  </TouchableOpacity>
-
-                  {/* Sello de pasaporte digital si está visitado */}
-                  {visited && (
-                    <View style={[styles.passportStamp, { borderColor: theme.colors.secondary }]}>
-                      <Text style={[styles.stampTextMain, { color: theme.colors.secondary }]}>
-                        {t("recorrido.visitado")}
-                      </Text>
-                      <Text style={[styles.stampTextSub, { color: theme.colors.secondary }]}>
-                        {t("recorrido.selloFecha")}
-                      </Text>
-                    </View>
-                  )}
-
-                  {/* Botón de eliminar del itinerario */}
-                  <TouchableOpacity
-                    style={styles.deleteBtn}
-                    onPress={() => toggleItem(lugar.id)}
-                    activeOpacity={0.7}
-                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                    accessible={true}
-                    accessibilityRole="button"
-                    accessibilityLabel={lang === 'es'
-                      ? `Eliminar ${lugar.nombre} del recorrido`
-                      : lang === 'pt'
-                      ? `Remover ${lugar.nombre} do roteiro`
-                      : `Remove ${lugar.nombre} from itinerary`}
-                  >
-                    <Ionicons name="trash-outline" size={17} color="#A83232" />
-                  </TouchableOpacity>
-                </View>
-              );
-            })}
+                    {sueltos.map((lugar, index) => renderLugar(lugar, index))}
+                  </View>
+                )}
+              </>
+            ) : (
+              <>
+                <Text style={[styles.comunaLabel, { color: theme.colors.textSecondary }]}>
+                  {t("recorrido.ordenSugerido")}
+                </Text>
+                {sueltos.map((lugar, index) => renderLugar(lugar, index))}
+              </>
+            )}
             <View style={{ height: 30 }} />
           </ScrollView>
         </View>
@@ -430,6 +475,15 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
     fontFamily: "monospace",
     marginTop: 12,
+    marginBottom: 8,
+    letterSpacing: 0.5,
+  },
+  dayGroupLabel: {
+    fontSize: 12,
+    fontWeight: "bold",
+    textTransform: "uppercase",
+    fontFamily: "monospace",
+    marginTop: 16,
     marginBottom: 8,
     letterSpacing: 0.5,
   },

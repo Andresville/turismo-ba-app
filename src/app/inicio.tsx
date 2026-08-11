@@ -33,6 +33,7 @@ const DB_CATEGORIAS = [
   "Teatros",
   "Canchas de futbol",
   "Zonas turisticas",
+  "Deportes",
   "recorrido",
 ];
 

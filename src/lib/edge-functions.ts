@@ -3,6 +3,8 @@ import {
   EdgeFunctionResult,
   FlightsSearchData,
   FlightsSearchRequest,
+  HotelLinkData,
+  HotelLinkRequest,
   ItineraryGenerateData,
   ItineraryGenerateRequest,
 } from "../types/travel";
@@ -39,3 +41,6 @@ export const searchFlights = (req: FlightsSearchRequest) =>
 
 export const generateItinerary = (req: ItineraryGenerateRequest) =>
   invokeEdgeFunction<ItineraryGenerateData>("itinerary-generate", req);
+
+export const getHotelLink = (req: HotelLinkRequest) =>
+  invokeEdgeFunction<HotelLinkData>("hotel-link", req);

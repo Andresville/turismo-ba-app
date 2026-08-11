@@ -15,6 +15,7 @@
       "Teatros",
       "Estadios",
       "Zonas turísticas",
+      "Deportes",
       "Mi recorrido"
     ],
     "cercaTitulo": "Cerca tuyo",
@@ -58,6 +59,8 @@
     "progreso": "Progreso del recorrido",
     "verMapa": "Ver circuito en el mapa",
     "ordenSugerido": "Orden sugerido para ir a pie",
+    "diaLabel": "Día {d}",
+    "otrosLugares": "Otros lugares guardados",
     "visitado": "VISITADO",
     "selloFecha": "BA EXPRESS",
     "comuna": "Comuna {c}",
@@ -85,6 +88,11 @@
     "estrellas": "estrellas",
     "precio": "Precio:",
     "cargando": "Buscando alojamientos...",
+    "masHoteles": {
+      "titulo": "¿No encontraste lo que buscabas?",
+      "subtitulo": "Buscá entre otros miles de hoteles.",
+      "boton": "Buscar más hoteles en Aviasales"
+    },
     "tabs": {
       "alojamiento": "Alojamiento",
       "vuelos": "Vuelos",
@@ -99,9 +107,9 @@
       "populares": "O elegí uno popular",
       "buscando": "Buscando...",
       "desde": "Desde",
-      "escalas": "escalas",
-      "sinEscalas": "directo",
-      "verAviasales": "Ver en Aviasales",
+      "fechaAprox": "Precio de referencia para fechas cercanas",
+      "disclaimer": "Precio aproximado según datos recientes. La tarifa final y las fechas se confirman en Aviasales.",
+      "buscarAviasales": "Buscar en Aviasales",
       "cargando": "Buscando vuelos...",
       "sinResultados": "No encontramos vuelos por ahora. Probá con otro destino.",
       "error": "No pudimos buscar vuelos. Probá de nuevo."

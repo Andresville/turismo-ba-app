@@ -223,54 +223,23 @@ export default function VuelosTab() {
 
       {status === "results" && data && (
         <View style={[styles.resultCard, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
-          {data.latest && (
-            <View style={styles.heroRow}>
-              <Text style={styles.heroLabel}>{t("alojamientos.vuelos.desde")}</Text>
-              <Text style={[styles.heroPrice, { color: theme.colors.secondary }]}>
-                USD {Math.round(data.latest.price)}
-              </Text>
-              {data.latest.departDate ? (
-                <Text style={styles.heroSub}>{data.latest.departDate}</Text>
-              ) : null}
-            </View>
-          )}
+          <View style={styles.heroRow}>
+            <Text style={styles.heroLabel}>{t("alojamientos.vuelos.desde")}</Text>
+            <Text style={[styles.heroPrice, { color: theme.colors.secondary }]}>
+              USD {Math.round(data.price)}
+            </Text>
+            <Text style={styles.heroSub}>{t("alojamientos.vuelos.fechaAprox")}</Text>
+          </View>
 
-          {data.cheapOptions.length > 0 && (
-            <View style={styles.optionsWrap}>
-              {data.cheapOptions.map((opt, idx) => (
-                <View
-                  key={`${opt.flightNumber}-${idx}`}
-                  style={[styles.optionRow, idx > 0 && { borderTopWidth: 1, borderTopColor: theme.colors.border }]}
-                >
-                  <Ionicons name="airplane" size={14} color={theme.colors.primary} />
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.optionAirline}>{opt.airline || "—"}</Text>
-                    <Text style={styles.optionSub}>
-                      {[
-                        opt.departureAt?.slice(0, 10),
-                        opt.transfers === 0
-                          ? t("alojamientos.vuelos.sinEscalas")
-                          : `${opt.transfers} ${t("alojamientos.vuelos.escalas")}`,
-                      ]
-                        .filter(Boolean)
-                        .join(" · ")}
-                    </Text>
-                  </View>
-                  <Text style={[styles.optionPrice, { color: theme.colors.secondary }]}>
-                    USD {Math.round(opt.price)}
-                  </Text>
-                </View>
-              ))}
-            </View>
-          )}
+          <Text style={styles.disclaimer}>{t("alojamientos.vuelos.disclaimer")}</Text>
 
           <TouchableOpacity
             style={[styles.btn, { backgroundColor: theme.colors.secondary }]}
             onPress={() => handleVerOferta(data.deepLink)}
             activeOpacity={0.85}
           >
-            <Ionicons name="open-outline" size={16} color="#fff" />
-            <Text style={styles.btnText}>{t("alojamientos.vuelos.verAviasales")}</Text>
+            <Ionicons name="search" size={16} color="#fff" />
+            <Text style={styles.btnText}>{t("alojamientos.vuelos.buscarAviasales")}</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -362,11 +331,13 @@ const styles = StyleSheet.create({
   },
   heroPrice: { fontSize: 28, fontWeight: "bold", marginTop: 2 },
   heroSub: { fontSize: 11, color: "#5B6270", marginTop: 2 },
-  optionsWrap: { marginBottom: 12 },
-  optionRow: { flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 9 },
-  optionAirline: { fontSize: 12.5, fontWeight: "bold", color: "#1B2330" },
-  optionSub: { fontSize: 10.5, color: "#8B8F7E", fontFamily: "monospace", marginTop: 1 },
-  optionPrice: { fontSize: 13, fontWeight: "bold" },
+  disclaimer: {
+    fontSize: 10.5,
+    color: "#8B8F7E",
+    textAlign: "center",
+    marginBottom: 12,
+    paddingHorizontal: 8,
+  },
   btn: {
     flexDirection: "row",
     alignItems: "center",

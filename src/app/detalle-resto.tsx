@@ -99,11 +99,20 @@ export default function DetalleRestoScreen() {
   }
 
   const foto = resto.foto_url ? { uri: resto.foto_url } : FOTOS_RESTAURANTES[resto.id];
-  const isMichelin = resto.reconocimiento.toLowerCase().includes("michelin");
+  const recRaw = resto.reconocimiento.toLowerCase();
+  const isMichelin = recRaw.includes("michelin");
+  const isBodegon = recRaw.includes("bodegon") || recRaw.includes("bodegón");
   const recColors = isMichelin
     ? { bg: "#FCE8E6", text: "#C9542A", border: "#F5B4AD" }
     : { bg: "#E6F4EA", text: "#3F6B4F", border: "#A3D8B6" };
-  const recLabel = isMichelin ? t("restaurantes.michelin") : t("restaurantes.bodegon");
+  // Solo Michelin y Bodegón tienen traducción dedicada; el resto de los
+  // reconocimientos (Parrilla, Confitería, Pizzería, etc.) se muestran tal
+  // cual vienen de la base, igual que ya hace la lista de restaurantes.
+  const recLabel = isMichelin
+    ? t("restaurantes.michelin")
+    : isBodegon
+    ? t("restaurantes.bodegon")
+    : resto.reconocimiento;
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
