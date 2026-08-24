@@ -1,0 +1,332 @@
+NOTAS DE REESTRUCTURACIÓN — TurismoBA
+(archivo de anotaciones, no implica cambios de código todavía)
+
+Acá vamos dejando ideas de cómo reorganizar/mejorar funciones o partes del código
+ya existentes, para revisarlas con calma más adelante. No confundir con
+posibles_mejoras.txt, que es features nuevas — esto es refactor/arquitectura de
+lo que ya está construido.
+
+---
+
+1. NAVEGACIÓN: "Lugares cercanos" apila pantallas de detalle sin límite
+
+Dónde: src/app/detalle.tsx, línea ~538-543 (tarjeta de "lugares cercanos").
+
+Qué pasa: al tocar un lugar cercano desde el detalle de un punto de interés,
+se usa router.push({ pathname: "/detalle", params: { id: sug.id } }). Cada
+salto agrega una pantalla nueva a la pila de navegación en vez de reemplazar
+la actual. Si el usuario va encadenando varios lugares cercanos (A -> B -> C
+-> D...), para volver a Inicio tiene que tocar la flecha de atrás una vez por
+cada salto, aunque en la barra inferior "Inicio" se muestre siempre marcado
+como activo (detalle.tsx tiene hardcodeado <BottomNavBar activeTab={0} />
+sin importar desde dónde se entró realmente a la pantalla).
+
+Ideas para pensar (no decidido todavía):
+- Cambiar ese router.push por router.replace en la tarjeta de "lugares
+  cercanos", así cada salto reemplaza la pantalla anterior en vez de
+  apilarla, y "atrás" siempre vuelve de un solo toque a donde se entró
+  originalmente (Inicio, Mapa, Recorrido, etc.). Hay que revisar si en algún
+  caso interesa conservar el historial de saltos (poder volver atrás lugar
+  por lugar) antes de aplicarlo.
+- Alternativa más chica: dejar el push como está, pero agregar algún atajo
+  para volver directo a Inicio sin importar la profundidad de la pila (por
+  ejemplo, que tocar el ícono "Inicio" de la barra inferior resetee la pila
+  en vez de solo navegar).
+- Separado, pero relacionado: activeTab={0} en detalle.tsx está fijo, no
+  refleja la pantalla real desde la que se entró (podría venir de Mapa,
+  Recorrido, etc.). Ver si conviene pasarlo como parámetro de navegación.
+
+También existe otro router.push en detalle.tsx (línea ~105, "Cómo llegar" ->
+/mapa) pero ese es un flujo distinto, no genera el mismo apilamiento porque
+no se repite en cadena.
+
+>> PROPUESTA ELEGIDA (18 ago): router.replace en la tarjeta de "lugares
+cercanos". No hay ningún caso real donde el usuario quiera "deshacer" un
+salto lateral entre lugares cercanos lugar por lugar — es navegación
+horizontal (entre hermanos), no una jerarquía donde el historial importa.
+Con replace, "atrás" siempre devuelve en un solo toque a donde arrancó la
+exploración (Inicio, Mapa, Recorrido, itinerario IA), sin importar cuántos
+lugares cercanos haya encadenado. Es el patrón estándar en apps de
+contenido para navegación entre ítems relacionados. De paso, aprovechar el
+mismo cambio para pasar el tab de origen como parámetro y que
+BottomNavBar.activeTab refleje de dónde vino realmente, en vez de quedar
+fijo en Inicio.
+
+---
+
+2. COPY: botón "Guardar" del detalle es ambiguo
+
+Dónde: src/app/detalle.tsx línea ~500, botón junto a "Cómo llegar". Usa las
+claves i18n detalle.guardar / detalle.guardado ("Guardar" / "Guardado" en
+es.json, y sus equivalentes en en.json/pt.json).
+
+Qué pasa: ese botón guarda el lugar en "Mi Recorrido" (el mismo destino que
+el botón "Guardar en Mi Recorrido" del Itinerario IA), pero solo dice
+"Guardar" a secas, sin aclarar dónde. En la pantalla de Itinerario IA el
+botón equivalente sí es explícito ("Guardar en Mi Recorrido"), lo que hace
+más evidente el destino.
+
+Idea para pensar: renombrar a algo como "Guardar en Mi Recorrido" (o una
+versión más corta tipo "A mi recorrido") para que sea consistente con el
+otro botón. Ojo con el espacio: este botón vive a mitad de ancho al lado de
+"Cómo llegar" (ver imagen compartida), así que "Guardar en Mi Recorrido"
+capaz no entra bien ahí sin achicar la tipografía o cambiar el layout —
+revisar cómo queda antes de aplicarlo, quizás conviene una frase más corta
+o reacomodar los dos botones.
+
+>> PROPUESTA ELEGIDA (18 ago): mantener el layout side-by-side actual (no
+romper la jerarquía visual "Cómo llegar" primario naranja / "Guardar"
+secundario outline, ni ocupar una fila extra), pero cambiar el texto a
+"Guardar recorrido" / "Guardado" (en vez de "Guardar en Mi Recorrido"
+completo). Es corta, entra cómoda al lado de "Cómo llegar", y al compartir
+la palabra "recorrido" con el ítem "Recorrido" de la barra inferior y con
+"Mi Recorrido", el destino queda claro sin hacer falta la frase entera. El
+corazón que ya tiene el botón como ícono refuerza la idea de "guardar/
+favorito" visualmente.
+
+---
+
+3. UX: pantalla de carga del Itinerario IA es solo un spinner
+
+Dónde: src/components/booking/ItinerarioIATab.tsx, botón "Generar" cuando
+status === "loading" (línea ~268), hoy muestra un ActivityIndicator chico
+adentro del botón + el texto "Armando tu itinerario...", nada más cambia en
+pantalla mientras se espera la respuesta de Gemini.
+
+Idea: mientras carga, ir mostrando fotos aleatorias de los lugares (tipo
+carrusel que va cambiando) en vez de solo el círculo girando, para que sea
+más atractivo y entretenido durante la espera.
+
+Dato a favor: el componente ya carga todos los puntos_interes en el estado
+`pois` (para el join de poi_id más abajo), y esos registros ya traen
+foto_actual_url. Se podría filtrar los que tengan foto y armar el carrusel
+con esos, sin necesidad de pedir nada nuevo a la base.
+
+Cosas para pensar antes de meter mano:
+- Chequeado (18 ago): los 110 puntos_interes ya tienen foto_actual_url
+  cargada, así que el pool completo está disponible para el carrusel sin
+  filtrar nada. Si en el futuro se agregan lugares nuevos sin foto todavía,
+  ahí sí conviene filtrar por foto_actual_url no nulo antes de sortear.
+- Hoy no hay un espacio dedicado para esto en el layout: el "loading" vive
+  adentro del botón. Habría que agregar un bloque nuevo (por ejemplo debajo
+  del botón) que aparezca solo durante la carga.
+- Definir cada cuánto rota la foto y con qué transición (fade simple,
+  LayoutAnimation, etc.) para que no se sienta brusco.
+
+>> PROPUESTA ELEGIDA (18 ago): tarjeta tipo "postal" debajo del botón,
+visible solo durante status === "loading". Un solo lugar a la vez (no un
+carrusel de miniaturas, que se siente más "ruidoso"): foto grande con
+esquinas redondeadas (mismo radio que formCard/resultCard del resto de la
+app), degradé oscuro sutil en la parte inferior de la imagen, y encima del
+degradé el nombre del lugar + una línea de su descripción corta
+(descripcion_es/en/pt según el idioma activo — dato que ya viaja con cada
+`pois`, cero pedidos nuevos). Cada ~2.5-3s hace fade out/in y cambia a otro
+lugar al azar. Encima de la postal, más chico, se mantiene el texto actual
+"Armando tu itinerario..." a modo de label de estado. Es la opción que más
+aprovecha contenido que ya existe (foto + reseña) sin agregar nada al
+backend, y convierte la espera en una mini-postal de la ciudad en vez de
+puro spinner.
+
+---
+
+4. UX: lugares visitados siguen apareciendo en el circuito del mapa
+
+Dónde: src/app/mapa.tsx (marcadores + rutas por día del itinerario) y
+src/app/recorrido.tsx (dueño real de "visitado" hoy).
+
+Qué pasa: un lugar marcado como visitado en Mi Recorrido (recorrido.tsx)
+sigue apareciendo como parada y como parte de la línea de ruta en el mapa,
+aunque ya no tenga sentido seguir yendo. Confirmado en el código: el estado
+`visitedItems` vive SOLO como estado local de recorrido.tsx (useState +
+AsyncStorage "@visited_items"), no está en ItineraryContext junto con
+savedItems/dayMap — por eso mapa.tsx no lo puede filtrar hoy, ni siquiera
+sabe que existe.
+
+Idea: que un lugar visitado no aparezca más como parada activa en el
+circuito del mapa (ni como marcador ni como parte de la ruta calculada),
+para que el mapa muestre solo lo que falta.
+
+Camino para pensar:
+- Mover visitedItems (con isVisited/toggleVisited) de recorrido.tsx al
+  ItineraryContext, mismo patrón que ya se usa para savedItems y dayMap
+  (persistido en AsyncStorage, expuesto a cualquier pantalla). Así
+  recorrido.tsx y mapa.tsx quedan sincronizados automáticamente.
+- En mapa.tsx, al armar gruposItinerario (agrupado por día), filtrar los
+  lugares con isVisited(l.id) antes de pedir la ruta a OpenRouteService y
+  antes de renderizar el Marker — así ni pesan en el cálculo de la ruta ni
+  se ven en el mapa.
+- Decidir si conviene sacarlos del todo (lo que pide la idea original) o
+  dejarlos como marcador "apagado"/gris sin formar parte de la línea de
+  ruta, para poder ubicarlos visualmente igual sin que interrumpan el
+  circuito. Se puede evaluar cuál se ve mejor antes de decidir.
+
+>> PROPUESTA ELEGIDA (18 ago): híbrido, no sacarlos del todo. Se excluyen de
+el cálculo y dibujo de la ruta (la Polyline ya no pasa por ahí — esa es la
+parte que realmente molesta, una ruta que te manda a un lugar que ya
+visitaste), pero el marcador se mantiene en el mapa con un estilo "apagado"
+(gris/baja opacidad, capaz con un ícono de check en vez del ícono de
+categoría) en lugar de desaparecer. Sacarlo por completo genera un salto
+raro ("tenía 8 paradas y ahora hay 7, ¿qué pasó?") y pierde referencia
+espacial de por dónde ya pasaste; el híbrido resuelve el problema real (la
+ruta ya no te manda ahí) sin esa sensación de pérdida de información.
+
+---
+
+5. INFO. ARQUITECTURA: "Itinerario IA" capaz debería vivir en Recorrido, no en Reservas
+
+Dónde: hoy ItinerarioIATab es una de las 3 pestañas de src/app/alojamientos.tsx
+("Reservas": Alojamiento | Vuelos | Itinerario IA). "Mi Recorrido" es una
+pantalla aparte (src/app/recorrido.tsx, ítem propio de la barra inferior).
+
+Planteo: conceptualmente el Itinerario IA arma contenido que termina
+guardado en Mi Recorrido, no es una reserva — tiene más sentido de
+navegación vivir junto a Recorrido que junto a Vuelos/Alojamiento. Dos
+formas posibles de acomodarlo, a pensar cuál conviene más:
+- Vista separada: un botón/acceso desde recorrido.tsx (por ejemplo desde el
+  estado vacío "Tu pasaporte está vacío", que hoy solo tiene "Buscar
+  lugares" como CTA — ahí calzaría muy bien un segundo botón "Generar con
+  IA") que abra el generador como pantalla propia.
+- Menú desplegable/sección expandible dentro de la misma pantalla de
+  Recorrido, sin navegar a otro lado.
+
+Impacto si se hace: sacar ItinerarioIATab de alojamientos.tsx deja a
+"Reservas" con solo 2 pestañas (Alojamiento, Vuelos) — repensar si sigue
+valiendo la pena el selector de pestañas o conviene otra estructura ahí
+también. No es un cambio chico, toca navegación en varios lugares.
+
+>> PROPUESTA ELEGIDA (18 ago): sección expandible dentro de la misma
+pantalla de Recorrido, no una vista/ruta separada. Un botón bien visible
+arriba de la lista (junto a la tarjeta de progreso, ícono "sparkles" —
+mismo ícono que ya usa hoy el botón "Generar" — con el texto "Generar con
+IA") que al tocarlo despliega el formulario del generador (días + estilo +
+botón Generar) arriba de la lista de lugares guardados, empujándola hacia
+abajo, en vez de navegar a otra pantalla. Reutiliza el mismo patrón de
+expandir/contraer que ya existe en la app (las tarjetas de día del propio
+Itinerario IA, las cards de AlojamientoTab), así que no es una interacción
+nueva para el usuario. Es más intuitivo que una pantalla aparte porque no
+hay que "salir" de Mi Recorrido para generarlo — todo pasa en el mismo
+lugar donde después se va a ver el resultado. Para el estado vacío
+("Tu pasaporte está vacío"), agregar "Generar con IA" como segundo botón
+junto a "Buscar lugares".
+
+---
+
+6. LÓGICA: guardar un itinerario IA nuevo se apila con el anterior
+
+Dónde: src/components/booking/ItinerarioIATab.tsx, handleGuardarTodo()
+(línea ~99). Guarda cada poi_id con su día vía toggleItem(id, day), pero
+nunca limpia lo que haya quedado guardado de una generación anterior.
+
+Qué pasa: si generás y guardás un itinerario de 3 días, y después generás y
+guardás OTRO itinerario distinto, los lugares de ambos quedan mezclados en
+Mi Recorrido bajo los mismos números de día (dayMap solo guarda un número de
+día por lugar, no de qué "tanda" de generación viene) — en recorrido.tsx y
+mapa.tsx el "Día 1" terminaría mostrando lugares de las dos generaciones
+juntos, sin forma de distinguirlos.
+
+Dos caminos posibles, a decidir:
+- (Más simple) Que guardar un itinerario nuevo reemplace el anterior: al
+  tocar "Guardar en Mi Recorrido", primero sacar de savedItems/dayMap
+  cualquier lugar que ya tuviera día asignado (o sea, que viniera de un IA
+  anterior), dejando intactos los guardados a mano sin día, y recién ahí
+  guardar la tanda nueva.
+- (Más completo, más trabajo) Distinguir tandas: agregarle a cada entrada
+  además del día un identificador de "generación" (por ejemplo timestamp),
+  y que recorrido.tsx/mapa.tsx agrupen por (generación, día) en vez de solo
+  por día. Permite conservar varios itinerarios guardados en paralelo, pero
+  implica cambiar la forma de dayMap en ItineraryContext, la agrupación en
+  ambas pantallas, y quizás la paleta de colores del mapa si hay más grupos
+  que días.
+
+>> PROPUESTA ELEGIDA (18 ago): reemplazar, con confirmación explícita. "Mi
+Recorrido" tiene mentalidad de singular — tu ÚNICO recorrido por la ciudad,
+no una biblioteca de itinerarios guardados — así que reemplazar es lo que
+el usuario espera la mayoría de las veces (armó una versión mejor y quiere
+esa). Pero como igual borra algo que el usuario guardó a propósito, no
+conviene hacerlo en silencio: al tocar "Guardar en Mi Recorrido" habiendo
+ya paradas de una generación anterior, mostrar un Alert (mismo patrón que
+ya se usa en la app) tipo "Ya tenés un itinerario guardado. Guardar este lo
+va a reemplazar. ¿Confirmás?" / Cancelar / Reemplazar. Los lugares
+guardados a mano (sin día asignado) no se tocan, solo se reemplazan los que
+vienen de una generación de IA anterior. Lo de distinguir tandas en
+paralelo queda como posible mejora futura, no hace falta para el uso
+típico de la app (una persona planificando un viaje, no varios recorridos
+simultáneos).
+
+---
+
+7. FALTA: botón para vaciar todo Mi Recorrido de una vez
+
+Dónde: src/app/recorrido.tsx — cada lugar tiene su propio ícono de tacho
+(toggleItem(lugar.id), línea ~229) pero no hay forma de borrar todos de
+una. Hoy hay que ir de a uno.
+
+Idea: agregar un botón "Limpiar todo" (con confirmación tipo Alert, mismo
+patrón que ya se usa en handleCallPress de AlojamientoTab, para evitar un
+borrado accidental) además de mantener el tacho individual — o sea, poder
+elegir "Limpiar todo" o "Borrar de a uno", no reemplazar una cosa por la
+otra.
+
+Camino técnico: agregar un método clearAll() a ItineraryContext que
+resetee savedItems y dayMap juntos en un solo paso (hoy no existe, solo
+está toggleItem uno por uno).
+
+>> PROPUESTA ELEGIDA (18 ago): un link de texto chico "Limpiar todo",
+alineado a la derecha en la misma fila que el label de sección (donde hoy
+dice "ORDEN SUGERIDO PARA IR A PIE" o "DÍA 1") — mismo estilo visual que ya
+usa el link "Limpiar" del filtro de categorías en inicio.tsx (texto chico,
+no un botón grande), para que una acción destructiva y poco frecuente no
+compita visualmente con el CTA principal "Ver circuito en el mapa". Al
+tocarlo, un Alert de confirmación ("¿Vaciar todo tu recorrido? Esta acción
+no se puede deshacer" / Cancelar / Vaciar todo) antes de ejecutar
+clearAll(). El tacho individual de cada lugar se mantiene igual que hoy —
+las dos formas conviven, cada una para su caso de uso.
+
+---
+
+8. iOS: sin soporte nativo para iPad (supportsTablet)
+
+Dónde: app.json, sección ios (no tiene supportsTablet declarado).
+
+Qué pasa: sin ese flag, en iPad la app corre en modo compatibilidad de
+iPhone (escalada), no aprovecha la pantalla grande con un layout propio.
+No bloquea publicar ni rompe nada, es solo optimización visual pendiente
+para iPad. Detectado el 23 ago al preparar el build de iOS.
+
+Idea para pensar: evaluar más adelante si vale la pena declarar
+supportsTablet: true y adaptar algunas pantallas (sobre todo el mapa y las
+grillas de categorías) a un layout más ancho, o dejarlo en modo
+compatibilidad si no es prioridad.
+
+---
+
+9. RIESGO LEGAL: fotos de lugares sin licencia verificada (afecta Android e iOS)
+
+Dónde: "Fotos Turismo BA/" y todo lo que ya se subió a Supabase (foto_actual_url
+/ foto_antigua_url de puntos_interes, restaurantes) — no es un tema de código,
+es de los assets/contenido.
+
+Qué pasa: confirmado el 24 ago con el usuario — las fotos de museos,
+restaurantes, estadios, etc. se bajaron de Google Imágenes / sitios de
+turismo, sin verificar licencia de cada una. Eso es, técnicamente, uso sin
+autorización de contenido con derechos de autor de terceros, y aplica tanto
+a lo que ya está en producción en Google Play como a lo que se está por
+enviar a Apple. En la declaración de derechos de contenido de App Store
+Connect se optó por declarar honestamente que la app SÍ contiene contenido
+de terceros, en vez de declarar en falso que no — decisión consciente del
+usuario, aceptando el riesgo por ahora para no trabar el envío a revisión.
+
+Pendiente para resolver con calma más adelante: reemplazar gradualmente las
+fotos por fuentes seguras —
+- Wikimedia Commons (licencia Creative Commons, la mayoría de los lugares
+  históricos/turísticos ya tienen fotos ahí)
+- Kits de prensa oficiales de entes de turismo (Turismo BA, museos
+  nacionales) que suelen autorizar uso editorial explícitamente
+- Para restaurantes/negocios privados (el caso de mayor riesgo real, son
+  los que más probablemente reclamen si ven su local sin permiso): lo ideal
+  es conseguir fotos propias o permiso directo del lugar
+
+Priorizar primero los negocios privados (restaurantes) sobre los lugares
+públicos/históricos, que en general tienen más material con licencia libre
+disponible y menor probabilidad de reclamo activo.
+

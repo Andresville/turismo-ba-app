@@ -1,4 +1,5 @@
 import { Stack } from "expo-router";
+import { StatusBar } from "expo-status-bar";
 import { Provider as PaperProvider } from "react-native-paper";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { ItineraryProvider } from "../context/ItineraryContext";
@@ -13,6 +14,7 @@ export default function RootLayout() {
         <LocationProvider>
           <ItineraryProvider>
             <PaperProvider theme={appTheme}>
+              <StatusBar style="light" />
               <Stack screenOptions={{ headerShown: false }}>
                 <Stack.Screen name="index" />
                 <Stack.Screen name="inicio" />

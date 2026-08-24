@@ -12,6 +12,9 @@
     "ios": {
       "icon": "./assets/images/icon.png",
       "bundleIdentifier": "com.andresville.turismoba",
+      "config": {
+        "googleMapsApiKey": "AIzaSyBlyq2of7EO-GN2Zr3KhJKy8IEMD9k64ec"
+      },
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "Turismo Buenos Aires utiliza tu ubicación para mostrarte los puntos turísticos y restaurantes más cercanos en el mapa y calcular tu circuito peatonal.",
         "ITSAppUsesNonExemptEncryption": false
@@ -42,6 +45,8 @@
         "expo-splash-screen",
         {
           "backgroundColor": "#0A398A",
+          "image": "./assets/images/splash-icon.png",
+          "imageWidth": 76,
           "android": {
             "image": "./assets/images/splash-icon.png",
             "imageWidth": 76
