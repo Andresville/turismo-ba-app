@@ -330,3 +330,28 @@ Priorizar primero los negocios privados (restaurantes) sobre los lugares
 públicos/históricos, que en general tienen más material con licencia libre
 disponible y menor probabilidad de reclamo activo.
 
+---
+
+10. PENDIENTE: ficha de App Store Connect solo en español
+
+Dónde: App Store Connect → Distribution → App para iOS Versión 1.0 (metadatos:
+Descripción, Texto promocional, Palabras clave, capturas de pantalla).
+
+Qué pasa: a diferencia de Play Store (que ya tiene ficha completa en
+español, inglés y portugués), la ficha de iOS se armó y envió a revisión
+el 24 ago solo en "Español (España)". Nunca se agregó inglés ni portugués
+como idiomas adicionales de la ficha.
+
+Por qué no se hizo ya: se decidió esperar a que termine esta primera
+revisión (la cuenta de Apple es nueva, primer envío) antes de tocar
+cualquier metadato, para no arriesgarse a complicar o reiniciar el proceso
+de revisión en curso.
+
+Cuándo retomarlo: apenas llegue la confirmación de aprobación (o rechazo)
+de Apple. Es una tarea rápida — no necesita build nuevo ni Xcode, es
+agregar los idiomas desde el selector de idioma de la ficha y pegar los
+mismos textos que ya se armaron para Play Store (descripción, texto
+promocional, palabras clave equivalentes en inglés y portugués, ya
+redactados en esta misma conversación). Las capturas de pantalla no hace
+falta rehacerlas por idioma, Apple permite reusar las mismas.
+
