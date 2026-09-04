@@ -1,8 +1,10 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Animated,
+  ImageBackground,
   LayoutAnimation,
   ScrollView,
   StyleSheet,
@@ -66,6 +68,40 @@ export default function ItinerarioIATab() {
     pois.forEach((p) => (map[p.id] = p));
     return map;
   }, [pois]);
+
+  const poisConFoto = React.useMemo(
+    () => pois.filter((p) => !!p.foto_actual_url),
+    [pois]
+  );
+
+  const [postalPoi, setPostalPoi] = useState<Lugar | null>(null);
+  const postalOpacity = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (status !== "loading" || poisConFoto.length === 0) return;
+    let cancelled = false;
+    const pickRandom = () => poisConFoto[Math.floor(Math.random() * poisConFoto.length)];
+
+    setPostalPoi(pickRandom());
+    postalOpacity.setValue(0);
+    Animated.timing(postalOpacity, { toValue: 1, duration: 300, useNativeDriver: true }).start();
+
+    const interval = setInterval(() => {
+      Animated.timing(postalOpacity, { toValue: 0, duration: 250, useNativeDriver: true }).start(() => {
+        if (cancelled) return;
+        setPostalPoi(pickRandom());
+        Animated.timing(postalOpacity, { toValue: 1, duration: 300, useNativeDriver: true }).start();
+      });
+    }, 2800);
+
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, [status, poisConFoto]);
+
+  const postalDescripcion = (poi: Lugar) =>
+    (lang === "en" ? poi.descripcion_en : lang === "pt" ? poi.descripcion_pt : poi.descripcion_es) || "";
 
   const toggleStyle = (code: string) => {
     setSelectedStyles((prev) =>
@@ -277,6 +313,29 @@ export default function ItinerarioIATab() {
         </Text>
       </TouchableOpacity>
 
+      {status === "loading" && postalPoi && (
+        <Animated.View
+          style={[
+            styles.postalCard,
+            { backgroundColor: theme.colors.surface, borderColor: theme.colors.border, opacity: postalOpacity },
+          ]}
+        >
+          <ImageBackground
+            source={{ uri: postalPoi.foto_actual_url }}
+            style={styles.postalImage}
+            imageStyle={styles.postalImageInner}
+          />
+          <View style={styles.postalCaption}>
+            <Text style={styles.postalNombre} numberOfLines={1}>
+              {postalPoi.nombre}
+            </Text>
+            <Text style={styles.postalDesc} numberOfLines={2}>
+              {postalDescripcion(postalPoi)}
+            </Text>
+          </View>
+        </Animated.View>
+      )}
+
       {selectedStyles.length === 0 && (
         <Text style={styles.hint}>{t("alojamientos.itinerario.eligeEstilo")}</Text>
       )}
@@ -351,6 +410,20 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   errorText: { flex: 1, fontSize: 12.5, color: "#1B2330" },
+  postalCard: {
+    borderWidth: 1,
+    borderRadius: 12,
+    overflow: "hidden",
+    marginBottom: 10,
+  },
+  postalImage: { width: "100%", height: 240 },
+  postalImageInner: { resizeMode: "cover" },
+  postalCaption: {
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
+  postalNombre: { fontSize: 14, fontWeight: "bold", color: "#1B2330" },
+  postalDesc: { fontSize: 11.5, color: "#5B6270", marginTop: 2, lineHeight: 15 },
   dayCard: {
     borderWidth: 1,
     borderRadius: 12,

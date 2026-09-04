@@ -91,6 +91,32 @@ const STYLE_HINTS: Record<string, Record<string, string>> = {
   },
 };
 
+// Categorías reales (columna `categoria`, siempre en español) asociadas a
+// cada estilo. Se usan para recortar el listado de lugares que se manda a
+// Gemini: mandar los 117 lugares del catálogo completo en cada pedido, sin
+// importar el estilo elegido, era la causa principal de la latencia
+// (prompts de +8000 tokens) y de los timeouts de la función (150s, límite
+// de la plataforma) — confirmado en logs el 4 sept 2026. "gastronomico" es
+// el único sin categoría asociada (no tiene subconjunto propio dentro de
+// puntos_interes: los restaurantes viven en otra tabla, no se consultan
+// acá), así que elegirlo solo o combinado sigue mandando el catálogo
+// completo.
+const CATEGORIAS_POR_ESTILO: Record<string, string[]> = {
+  deportivo: ["Deportes"],
+  aire_libre: ["Parques"],
+  museos: ["Museos"],
+  bajo_presupuesto: ["Parques", "Zonas turisticas"],
+  aventura: ["Parques", "Deportes"],
+  // "cultural" no tenía pista propia en STYLE_HINTS por considerarse "ya
+  // amplio", pero ese mismo motivo (museos, teatros, edificios históricos,
+  // cúpulas) es un subconjunto real y acotado del catálogo: 71 de 117
+  // lugares en vez de los 117 completos. "gastronomico" queda sin mapeo
+  // porque no tiene ningún subconjunto propio dentro de puntos_interes (los
+  // restaurantes viven en otra tabla, no se consultan acá) — elegir
+  // "gastronomico" solo sigue mandando el catálogo completo.
+  cultural: ["Museos", "Teatros", "Edificios historicos", "Cupulas"],
+};
+
 const responseSchema = {
   type: "OBJECT",
   properties: {
@@ -181,7 +207,35 @@ Deno.serve(async (req: Request) => {
 
     const validIds = new Set(pois.map((p: any) => p.id as string));
 
-    const listado = pois
+    // Si TODOS los estilos elegidos tienen categoría asociada, se filtra el
+    // catálogo a la unión de esas categorías antes de armar el prompt. Si
+    // alguno de los estilos elegidos es "gastronomico" (sin entrada en el
+    // mapa), no se filtra nada.
+    const categoriasFiltro = new Set<string>();
+    const puedeFiltrar = styles.every((s) => {
+      const cats = CATEGORIAS_POR_ESTILO[s];
+      if (!cats) return false;
+      cats.forEach((c) => categoriasFiltro.add(c));
+      return true;
+    });
+    const poisFiltrados =
+      puedeFiltrar && categoriasFiltro.size > 0
+        ? pois.filter((p: any) => categoriasFiltro.has(p.categoria))
+        : pois;
+
+    // Tope de respaldo: "gastronomico" (solo o combinado con otro estilo sin
+    // mapeo) no tiene forma de filtrarse por categoría y seguía mandando el
+    // catálogo completo (117 lugares) sin importar el estilo — eso solo,
+    // reprodujo el mismo timeout/WORKER_RESOURCE_LIMIT de 150s (confirmado
+    // 4 sept 2026). Si después del filtro por estilo sigue habiendo más de
+    // MAX_POIS_EN_PROMPT, se recorta a una muestra al azar de ese tamaño.
+    const MAX_POIS_EN_PROMPT = 50;
+    const poisAcotados =
+      poisFiltrados.length > MAX_POIS_EN_PROMPT
+        ? [...poisFiltrados].sort(() => Math.random() - 0.5).slice(0, MAX_POIS_EN_PROMPT)
+        : poisFiltrados;
+
+    const listado = poisAcotados
       .map((p: any) => {
         const desc = (p[descCol] ?? p.descripcion_es ?? "").toString().slice(0, 120);
         return `- poi_id=${p.id} | ${p.nombre} | ${p.categoria} | lat=${p.lat},lng=${p.lng} | ${desc}`;
@@ -209,6 +263,18 @@ Deno.serve(async (req: Request) => {
         generationConfig: {
           responseMimeType: "application/json",
           responseSchema,
+          // 7 días con varias paradas por día y un "motivo" descriptivo por
+          // parada puede superar los 4096 tokens y cortar el JSON a la
+          // mitad (PARSE_ERROR) — confirmado 4 sept 2026 con days=7. 8192
+          // da margen de sobra para el caso más grande sin afectar la
+          // latencia de pedidos más chicos (es un tope, no un objetivo).
+          maxOutputTokens: 8192,
+          // La tarea es extraer/ordenar de una lista ya acotada, no razonar
+          // libremente: desactivar el thinking interno del modelo evita
+          // varios segundos (a veces +60s) de latencia que no aportan nada
+          // acá y fueron la causa principal de los timeouts de 150s vistos
+          // en los logs de la función (confirmado 4 sept 2026).
+          thinkingConfig: { thinkingBudget: 0 },
         },
       }),
     });

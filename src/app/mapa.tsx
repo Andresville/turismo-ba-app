@@ -381,11 +381,21 @@ export default function MapaScreen() {
                       latitude: Number(lugar.lat),
                       longitude: Number(lugar.lng),
                     }}
-                    title={lugar.nombre}
-                    description={lang === "es" ? "Ver detalle →" : lang === "pt" ? "Ver detalhes →" : "View details →"}
-                    onCalloutPress={() => handleNavigateToDetail(lugar)}
                     pinColor={esItinerarioActivo ? (colorPorLugarId[lugar.id] || OTROS_LUGARES_COLOR) : getCategoryColor(lugar.categoria)}
-                  />
+                  >
+                    <Callout tooltip onPress={() => handleNavigateToDetail(lugar)}>
+                      <TouchableOpacity
+                        activeOpacity={0.7}
+                        onPress={() => handleNavigateToDetail(lugar)}
+                        style={styles.calloutBox}
+                      >
+                        <RNText style={styles.calloutTitle}>{lugar.nombre}</RNText>
+                        <RNText style={styles.calloutLink}>
+                          {lang === "es" ? "Ver detalle →" : lang === "pt" ? "Ver detalhes →" : "View details →"}
+                        </RNText>
+                      </TouchableOpacity>
+                    </Callout>
+                  </Marker>
                 );
               })}
 
@@ -504,6 +514,29 @@ const styles = StyleSheet.create({
     shadowRadius: 1.5,
     elevation: 3,
   },
+  calloutBox: {
+    backgroundColor: "#fff",
+    borderRadius: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    minWidth: 160,
+    maxWidth: 240,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3,
+    elevation: 5,
+  },
+  calloutTitle: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#1a1a1a",
+  },
+  calloutLink: {
+    fontSize: 12,
+    color: "#666",
+    marginTop: 2,
+  },
   loadingWrapper: { flex: 1, justifyContent: "center", alignItems: "center" },
   mapLegend: {
     flexDirection: "row",
@@ -538,28 +571,5 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.15,
     shadowRadius: 3,
     elevation: 4,
-  },
-  calloutNativeContainer: {
-    minWidth: 160,
-    maxWidth: 220,
-    padding: 4,
-  },
-  calloutNativeContent: {
-    width: "100%",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  calloutTitle: {
-    fontSize: 13,
-    fontWeight: "bold",
-    color: "#1B2330",
-    textAlign: "center",
-    marginBottom: 4,
-  },
-  calloutLink: {
-    fontSize: 11.5,
-    fontWeight: "700",
-    color: "#C9542A",
-    textAlign: "center",
   },
 });

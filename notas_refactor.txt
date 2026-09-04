@@ -86,7 +86,7 @@ favorito" visualmente.
 
 ---
 
-3. UX: pantalla de carga del Itinerario IA es solo un spinner
+3. [IMPLEMENTADO 4 sept] UX: pantalla de carga del Itinerario IA es solo un spinner
 
 Dónde: src/components/booking/ItinerarioIATab.tsx, botón "Generar" cuando
 status === "loading" (línea ~268), hoy muestra un ActivityIndicator chico
