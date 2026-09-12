@@ -6,12 +6,14 @@ import {
   Animated,
   ImageBackground,
   LayoutAnimation,
+  Modal,
   ScrollView,
   StyleSheet,
   TouchableOpacity,
   View,
 } from "react-native";
 import { Card, Text } from "react-native-paper";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 import { useItinerary } from "../../context/ItineraryContext";
 import { generateItinerary } from "../../lib/edge-functions";
@@ -69,27 +71,39 @@ export default function ItinerarioIATab() {
     return map;
   }, [pois]);
 
-  const poisConFoto = React.useMemo(
-    () => pois.filter((p) => !!p.foto_actual_url),
-    [pois]
-  );
+  // Pool de fotos para la postal de carga: cada lugar puede aportar su foto
+  // actual y/o su foto antigua (dos entradas separadas), para que la rotación
+  // tenga más variedad y muestre también el material histórico.
+  type PostalFoto = { poi: Lugar; url: string };
+  const fotosDisponibles = React.useMemo(() => {
+    const arr: PostalFoto[] = [];
+    pois.forEach((p) => {
+      if (p.foto_actual_url) arr.push({ poi: p, url: p.foto_actual_url });
+      if (p.foto_antigua_url) arr.push({ poi: p, url: p.foto_antigua_url });
+    });
+    return arr;
+  }, [pois]);
 
-  const [postalPoi, setPostalPoi] = useState<Lugar | null>(null);
+  const [postalFoto, setPostalFoto] = useState<PostalFoto | null>(null);
   const postalOpacity = useRef(new Animated.Value(0)).current;
+  // Si el usuario cierra el modal de carga con la cruz, se ignora el
+  // resultado de generateItinerary cuando llegue (la request sigue en
+  // vuelo del lado del servidor, pero no se aplica ningún cambio de estado).
+  const canceladoRef = useRef(false);
 
   useEffect(() => {
-    if (status !== "loading" || poisConFoto.length === 0) return;
+    if (status !== "loading" || fotosDisponibles.length === 0) return;
     let cancelled = false;
-    const pickRandom = () => poisConFoto[Math.floor(Math.random() * poisConFoto.length)];
+    const pickRandom = () => fotosDisponibles[Math.floor(Math.random() * fotosDisponibles.length)];
 
-    setPostalPoi(pickRandom());
+    setPostalFoto(pickRandom());
     postalOpacity.setValue(0);
     Animated.timing(postalOpacity, { toValue: 1, duration: 300, useNativeDriver: true }).start();
 
     const interval = setInterval(() => {
       Animated.timing(postalOpacity, { toValue: 0, duration: 250, useNativeDriver: true }).start(() => {
         if (cancelled) return;
-        setPostalPoi(pickRandom());
+        setPostalFoto(pickRandom());
         Animated.timing(postalOpacity, { toValue: 1, duration: 300, useNativeDriver: true }).start();
       });
     }, 2800);
@@ -98,7 +112,7 @@ export default function ItinerarioIATab() {
       cancelled = true;
       clearInterval(interval);
     };
-  }, [status, poisConFoto]);
+  }, [status, fotosDisponibles]);
 
   const postalDescripcion = (poi: Lugar) =>
     (lang === "en" ? poi.descripcion_en : lang === "pt" ? poi.descripcion_pt : poi.descripcion_es) || "";
@@ -111,12 +125,14 @@ export default function ItinerarioIATab() {
 
   const handleGenerar = async () => {
     if (selectedStyles.length === 0 || cooling) return;
+    canceladoRef.current = false;
     setStatus("loading");
     setErrorInfo(null);
     setCooling(true);
     setTimeout(() => setCooling(false), COOLDOWN_MS);
 
     const result = await generateItinerary({ days, styles: selectedStyles, lang });
+    if (canceladoRef.current) return;
     if (result.success) {
       setItinerary(result.data.dias);
       setExpandedDay(result.data.dias[0]?.dia ?? null);
@@ -126,6 +142,11 @@ export default function ItinerarioIATab() {
       setErrorInfo(result.error);
       setStatus("error");
     }
+  };
+
+  const handleCancelarCarga = () => {
+    canceladoRef.current = true;
+    setStatus("form");
   };
 
   const handleNuevo = () => {
@@ -313,28 +334,52 @@ export default function ItinerarioIATab() {
         </Text>
       </TouchableOpacity>
 
-      {status === "loading" && postalPoi && (
-        <Animated.View
-          style={[
-            styles.postalCard,
-            { backgroundColor: theme.colors.surface, borderColor: theme.colors.border, opacity: postalOpacity },
-          ]}
-        >
-          <ImageBackground
-            source={{ uri: postalPoi.foto_actual_url }}
-            style={styles.postalImage}
-            imageStyle={styles.postalImageInner}
-          />
-          <View style={styles.postalCaption}>
-            <Text style={styles.postalNombre} numberOfLines={1}>
-              {postalPoi.nombre}
-            </Text>
-            <Text style={styles.postalDesc} numberOfLines={2}>
-              {postalDescripcion(postalPoi)}
-            </Text>
+      <Modal
+        visible={status === "loading"}
+        transparent
+        animationType="fade"
+        onRequestClose={handleCancelarCarga}
+        statusBarTranslucent
+      >
+        <SafeAreaView style={styles.modalOverlay}>
+          <TouchableOpacity
+            style={styles.modalCloseBtn}
+            onPress={handleCancelarCarga}
+            activeOpacity={0.7}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+          >
+            <Ionicons name="close" size={26} color="#fff" />
+          </TouchableOpacity>
+
+          <View style={styles.modalBody}>
+            {postalFoto && (
+              <Animated.View style={[styles.modalPhotoWrap, { opacity: postalOpacity }]}>
+                <ImageBackground
+                  source={{ uri: postalFoto.url }}
+                  style={styles.modalPhoto}
+                  imageStyle={styles.modalPhotoInner}
+                />
+              </Animated.View>
+            )}
+
+            {postalFoto && (
+              <View style={styles.modalCaption}>
+                <Text style={styles.modalNombre} numberOfLines={1}>
+                  {postalFoto.poi.nombre}
+                </Text>
+                <Text style={styles.modalDesc} numberOfLines={3}>
+                  {postalDescripcion(postalFoto.poi)}
+                </Text>
+              </View>
+            )}
+
+            <View style={styles.modalStatusRow}>
+              <ActivityIndicator color="#fff" size="small" />
+              <Text style={styles.modalStatusText}>{t("alojamientos.itinerario.generando")}</Text>
+            </View>
           </View>
-        </Animated.View>
-      )}
+        </SafeAreaView>
+      </Modal>
 
       {selectedStyles.length === 0 && (
         <Text style={styles.hint}>{t("alojamientos.itinerario.eligeEstilo")}</Text>
@@ -410,20 +455,52 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   errorText: { flex: 1, fontSize: 12.5, color: "#1B2330" },
-  postalCard: {
-    borderWidth: 1,
-    borderRadius: 12,
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(8,10,16,0.8)",
+  },
+  modalCloseBtn: {
+    alignSelf: "flex-end",
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    marginTop: 8,
+    marginRight: 16,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(255,255,255,0.15)",
+  },
+  modalBody: {
+    flex: 1,
+    justifyContent: "center",
+    paddingHorizontal: 24,
+  },
+  modalPhotoWrap: {
+    width: "100%",
+    aspectRatio: 3 / 4,
+    borderRadius: 18,
     overflow: "hidden",
-    marginBottom: 10,
+    backgroundColor: "rgba(255,255,255,0.06)",
   },
-  postalImage: { width: "100%", height: 240 },
-  postalImageInner: { resizeMode: "cover" },
-  postalCaption: {
-    paddingHorizontal: 14,
-    paddingVertical: 10,
+  modalPhoto: { width: "100%", height: "100%" },
+  modalPhotoInner: { resizeMode: "contain" },
+  modalCaption: { marginTop: 18, alignItems: "center" },
+  modalNombre: { fontSize: 17, fontWeight: "bold", color: "#fff", textAlign: "center" },
+  modalDesc: {
+    fontSize: 13,
+    color: "rgba(255,255,255,0.75)",
+    marginTop: 6,
+    lineHeight: 18,
+    textAlign: "center",
   },
-  postalNombre: { fontSize: 14, fontWeight: "bold", color: "#1B2330" },
-  postalDesc: { fontSize: 11.5, color: "#5B6270", marginTop: 2, lineHeight: 15 },
+  modalStatusRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    marginTop: 26,
+  },
+  modalStatusText: { fontSize: 12.5, fontWeight: "bold", color: "rgba(255,255,255,0.85)" },
   dayCard: {
     borderWidth: 1,
     borderRadius: 12,
