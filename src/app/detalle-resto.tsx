@@ -293,7 +293,7 @@ export default function DetalleRestoScreen() {
 
         <View style={{ height: 40 }} />
       </ScrollView>
-      <BottomNavBar activeTab={3} />
+      <BottomNavBar activeTab={-1} />
     </SafeAreaView>
   );
 }

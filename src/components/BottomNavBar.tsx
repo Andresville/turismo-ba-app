@@ -7,7 +7,12 @@ import { useLang } from "../context/LangContext";
 import { useAppTheme } from "../theme/colors";
 
 interface BottomNavBarProps {
-  activeTab: number; // 0: Inicio, 1: Mapa, 2: Alojamientos, 3: Restaurantes, 4: Recorrido
+  // 0: Inicio, 1: Mapa, 2: Alojamientos, 3: Restaurantes, 4: Recorrido.
+  // -1: ninguna pestaña activa (sub-pantallas como detalle.tsx/detalle-resto.tsx,
+  // que no son ellas mismas una pestaña) — ningún ícono queda resaltado, y de
+  // paso el guard de handlePress nunca coincide, así los 5 botones quedan
+  // siempre habilitados para saltar directo a cualquier sección.
+  activeTab: number;
 }
 
 const traducciones = {

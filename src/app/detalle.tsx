@@ -570,7 +570,7 @@ export default function DetalleScreen() {
 
         <View style={{ height: 40 }} />
       </ScrollView>
-      <BottomNavBar activeTab={0} />
+      <BottomNavBar activeTab={-1} />
     </SafeAreaView>
   );
 }

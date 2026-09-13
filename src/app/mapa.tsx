@@ -371,9 +371,19 @@ export default function MapaScreen() {
                 />
               )}
 
-              {/* Renderizado de marcadores */}
+              {/* Renderizado de marcadores. El callout se resuelve distinto
+                  por plataforma: en Android el callout nativo (title/
+                  description + onCalloutPress) funciona bien y responde al
+                  toque; en iOS con PROVIDER_GOOGLE ese mismo callout nativo
+                  no reenvía el toque a onCalloutPress (bug conocido de
+                  react-native-maps), así que ahí se usa un <Callout tooltip>
+                  con contenido propio en RN. Un <Callout tooltip> en Android,
+                  en cambio, directamente no se muestra al tocar el pin — por
+                  eso no se puede usar la misma solución en los dos lados. */}
               {lugaresMostrados.map((lugar) => {
                 if (!lugar.lat || !lugar.lng) return null;
+                const descripcionCallout =
+                  lang === "es" ? "Ver detalle →" : lang === "pt" ? "Ver detalhes →" : "View details →";
                 return (
                   <Marker
                     key={lugar.id}
@@ -382,19 +392,22 @@ export default function MapaScreen() {
                       longitude: Number(lugar.lng),
                     }}
                     pinColor={esItinerarioActivo ? (colorPorLugarId[lugar.id] || OTROS_LUGARES_COLOR) : getCategoryColor(lugar.categoria)}
+                    title={Platform.OS === "android" ? lugar.nombre : undefined}
+                    description={Platform.OS === "android" ? descripcionCallout : undefined}
+                    onCalloutPress={Platform.OS === "android" ? () => handleNavigateToDetail(lugar) : undefined}
                   >
-                    <Callout tooltip onPress={() => handleNavigateToDetail(lugar)}>
-                      <TouchableOpacity
-                        activeOpacity={0.7}
-                        onPress={() => handleNavigateToDetail(lugar)}
-                        style={styles.calloutBox}
-                      >
-                        <RNText style={styles.calloutTitle}>{lugar.nombre}</RNText>
-                        <RNText style={styles.calloutLink}>
-                          {lang === "es" ? "Ver detalle →" : lang === "pt" ? "Ver detalhes →" : "View details →"}
-                        </RNText>
-                      </TouchableOpacity>
-                    </Callout>
+                    {Platform.OS === "ios" && (
+                      <Callout tooltip onPress={() => handleNavigateToDetail(lugar)}>
+                        <TouchableOpacity
+                          activeOpacity={0.7}
+                          onPress={() => handleNavigateToDetail(lugar)}
+                          style={styles.calloutBox}
+                        >
+                          <RNText style={styles.calloutTitle}>{lugar.nombre}</RNText>
+                          <RNText style={styles.calloutLink}>{descripcionCallout}</RNText>
+                        </TouchableOpacity>
+                      </Callout>
+                    )}
                   </Marker>
                 );
               })}

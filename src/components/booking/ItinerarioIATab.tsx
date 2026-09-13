@@ -3,6 +3,7 @@ import { useRouter } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   Animated,
   ImageBackground,
   LayoutAnimation,
@@ -42,7 +43,7 @@ export default function ItinerarioIATab() {
   const theme = useAppTheme();
   const { t, lang } = useTranslation();
   const router = useRouter();
-  const { toggleItem, isSaved } = useItinerary();
+  const { toggleItem, isSaved, dayMap, savedItems } = useItinerary();
 
   const [pois, setPois] = useState<Lugar[]>([]);
   const [days, setDays] = useState(3);
@@ -165,10 +166,58 @@ export default function ItinerarioIATab() {
         if (!dayByPoi.has(parada.poi_id)) dayByPoi.set(parada.poi_id, day.dia);
       });
     });
-    dayByPoi.forEach((day, id) => {
-      if (!isSaved(id)) toggleItem(id, day);
-    });
-    setSavedAll(true);
+
+    // Lugares que vienen de un itinerario IA guardado anteriormente (tienen
+    // día asignado en dayMap). Si esta nueva generación se guarda, esos se
+    // reemplazan — los guardados a mano (sin día, corazón) nunca se tocan.
+    const idsItinerarioAnterior = Object.keys(dayMap);
+
+    const guardar = () => {
+      // Set local sincrónico de qué queda guardado: no se puede usar
+      // isSaved()/savedItems (estado de React) para decidir los toggleItem
+      // siguientes en el mismo tick, porque ese estado no se actualiza hasta
+      // el próximo render — mismo motivo por el que ItineraryContext usa un
+      // ref interno en vez de leer su propio estado dentro de toggleItem.
+      const guardadosAhora = new Set(savedItems);
+
+      idsItinerarioAnterior.forEach((id) => {
+        toggleItem(id);
+        guardadosAhora.delete(id);
+      });
+
+      dayByPoi.forEach((day, id) => {
+        if (!guardadosAhora.has(id)) {
+          toggleItem(id, day);
+          guardadosAhora.add(id);
+        }
+      });
+
+      setSavedAll(true);
+    };
+
+    if (idsItinerarioAnterior.length > 0) {
+      Alert.alert(
+        lang === "es"
+          ? "¿Reemplazar itinerario guardado?"
+          : lang === "pt"
+          ? "Substituir roteiro salvo?"
+          : "Replace saved itinerary?",
+        lang === "es"
+          ? "Ya tenés un itinerario guardado. Guardar este lo va a reemplazar. Los lugares guardados de forma individual no se van a tocar."
+          : lang === "pt"
+          ? "Você já tem um roteiro salvo. Salvar este vai substituí-lo. Os lugares salvos individualmente não serão afetados."
+          : "You already have a saved itinerary. Saving this one will replace it. Places saved individually won't be affected.",
+        [
+          { text: lang === "es" ? "Cancelar" : lang === "pt" ? "Cancelar" : "Cancel", style: "cancel" },
+          {
+            text: lang === "es" ? "Reemplazar" : lang === "pt" ? "Substituir" : "Replace",
+            onPress: guardar,
+          },
+        ]
+      );
+    } else {
+      guardar();
+    }
   };
 
   const errorMessage = () => {

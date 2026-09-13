@@ -6,6 +6,7 @@ interface ItineraryContextProps {
   dayMap: Record<string, number>; // id -> día del itinerario IA que lo generó (sin entrada = guardado manual)
   toggleItem: (id: string, day?: number) => void;
   isSaved: (id: string) => boolean;
+  clearAll: () => void;
 }
 
 const ItineraryContext = createContext<ItineraryContextProps>({
@@ -13,6 +14,7 @@ const ItineraryContext = createContext<ItineraryContextProps>({
   dayMap: {},
   toggleItem: () => {},
   isSaved: () => false,
+  clearAll: () => {},
 });
 
 export const ItineraryProvider = ({
@@ -90,8 +92,14 @@ export const ItineraryProvider = ({
 
   const isSaved = (id: string) => savedItems.includes(id);
 
+  const clearAll = () => {
+    savedItemsRef.current = [];
+    setSavedItems([]);
+    setDayMap({});
+  };
+
   return (
-    <ItineraryContext.Provider value={{ savedItems, dayMap, toggleItem, isSaved }}>
+    <ItineraryContext.Provider value={{ savedItems, dayMap, toggleItem, isSaved, clearAll }}>
       {children}
     </ItineraryContext.Provider>
   );

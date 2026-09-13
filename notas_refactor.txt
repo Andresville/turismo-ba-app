@@ -8,7 +8,7 @@ lo que ya está construido.
 
 ---
 
-1. NAVEGACIÓN: "Lugares cercanos" apila pantallas de detalle sin límite
+1. [IMPLEMENTADO 12 sept, distinto a la propuesta original] NAVEGACIÓN: "Lugares cercanos" apila pantallas de detalle sin límite
 
 Dónde: src/app/detalle.tsx, línea ~538-543 (tarjeta de "lugares cercanos").
 
@@ -52,9 +52,26 @@ mismo cambio para pasar el tab de origen como parámetro y que
 BottomNavBar.activeTab refleje de dónde vino realmente, en vez de quedar
 fijo en Inicio.
 
+>> CAMBIO DE RUMBO (12 sept), a pedido explícito del usuario: no se tocó el
+router.push de "lugares cercanos" — se prefirió mantener el historial
+completo, para que la flecha de atrás siga devolviendo lugar por lugar por
+toda la cadena explorada. En cambio se encontró y arregló el problema real
+de fondo: BottomNavBar.handlePress tenía `if (activeTab === index) return`,
+y como detalle.tsx/detalle-resto.tsx hardcodean activeTab (0 y 3
+respectivamente) sin reflejar el origen real, tocar el botón que coincide
+con ese número fijo (típicamente "Inicio" desde detalle.tsx) no hacía nada.
+Solución final: activeTab ahora acepta -1 como "ninguna pestaña activa" —
+detalle.tsx y detalle-resto.tsx pasan activeTab={-1} en vez de un número
+fijo. Con -1 ningún ícono queda resaltado (el usuario ve claramente que no
+está "parado" en ninguna pestaña, a pedido explícito del usuario), y de
+paso el guard `activeTab === index` de handlePress nunca coincide, así los
+5 botones quedan siempre habilitados para saltar directo a cualquier
+sección sin importar cuán profunda esté la cadena de "lugares cercanos",
+mientras la flecha de atrás sigue recorriendo esa cadena como antes.
+
 ---
 
-2. COPY: botón "Guardar" del detalle es ambiguo
+2. [IMPLEMENTADO 12 sept] COPY: botón "Guardar" del detalle es ambiguo
 
 Dónde: src/app/detalle.tsx línea ~500, botón junto a "Cómo llegar". Usa las
 claves i18n detalle.guardar / detalle.guardado ("Guardar" / "Guardado" en
@@ -211,7 +228,7 @@ junto a "Buscar lugares".
 
 ---
 
-6. LÓGICA: guardar un itinerario IA nuevo se apila con el anterior
+6. [IMPLEMENTADO 12 sept] LÓGICA: guardar un itinerario IA nuevo se apila con el anterior
 
 Dónde: src/components/booking/ItinerarioIATab.tsx, handleGuardarTodo()
 (línea ~99). Guarda cada poi_id con su día vía toggleItem(id, day), pero
@@ -253,9 +270,20 @@ paralelo queda como posible mejora futura, no hace falta para el uso
 típico de la app (una persona planificando un viaje, no varios recorridos
 simultáneos).
 
+>> NOTA DE IMPLEMENTACIÓN (12 sept): confirmado con el usuario que los
+lugares guardados a mano deben seguir la lógica actual (quedar como un
+lugar aparte, sin día) sin importar qué pase con el itinerario IA.
+Detalle técnico no obvio: para decidir qué re-guardar después de sacar los
+lugares del itinerario anterior, NO se puede usar isSaved()/savedItems (son
+estado de React, no se actualizan hasta el próximo render) encadenando
+varios toggleItem() en el mismo tick — se arma un Set local a partir del
+savedItems ya cargado y se actualiza a mano en paralelo a cada toggleItem,
+mismo motivo por el que ItineraryContext.toggleItem usa un ref interno en
+vez de leer su propio estado.
+
 ---
 
-7. FALTA: botón para vaciar todo Mi Recorrido de una vez
+7. [IMPLEMENTADO 12 sept, texto distinto a la propuesta] FALTA: botón para vaciar todo Mi Recorrido de una vez
 
 Dónde: src/app/recorrido.tsx — cada lugar tiene su propio ícono de tacho
 (toggleItem(lugar.id), línea ~229) pero no hay forma de borrar todos de
@@ -281,6 +309,17 @@ tocarlo, un Alert de confirmación ("¿Vaciar todo tu recorrido? Esta acción
 no se puede deshacer" / Cancelar / Vaciar todo) antes de ejecutar
 clearAll(). El tacho individual de cada lugar se mantiene igual que hoy —
 las dos formas conviven, cada una para su caso de uso.
+
+>> AJUSTE AL IMPLEMENTAR (12 sept), a pedido del usuario: el texto del link
+quedó "Eliminar recorrido" en vez de "Limpiar todo" — más claro sobre qué
+hace la acción. El Alert de confirmación usa el mismo verbo ("¿Eliminar
+todo tu recorrido? Esta acción no se puede deshacer" / Cancelar / Eliminar).
+También se aplicó el mismo cambio de copy en detalleResto (punto 2) para
+consistencia. Además, el link se muestra una sola vez (junto al primer
+label de sección que aparece: "DÍA 1" si hay itinerario por días, u "Orden
+sugerido..." si es lista plana) y no repetido en cada grupo de día, para
+que quede claro que la acción borra TODO el recorrido y no solo ese grupo.
+clearAll() se agregó a ItineraryContext, resetea savedItems y dayMap juntos.
 
 ---
 

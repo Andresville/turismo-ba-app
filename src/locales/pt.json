@@ -63,7 +63,8 @@
     "visitado": "VISITADO",
     "selloFecha": "BA EXPRESS",
     "comuna": "Comuna {c}",
-    "cargando": "Carregando roteiro..."
+    "cargando": "Carregando roteiro...",
+    "eliminarRecorrido": "Excluir roteiro"
   },
   "restaurantes": {
     "titulo": "Restaurantes",
@@ -143,7 +144,7 @@
     "descripcion": "Descrição",
     "historia": "Resenha histórica",
     "comoLlegar": "Como chegar",
-    "guardar": "Salvar",
+    "guardar": "Salvar no roteiro",
     "guardado": "Salvo",
     "transporte": "Transporte público",
     "escuchar": "Ouvir resenha",
@@ -157,7 +158,7 @@
     "resena": "Resenha especial",
     "direccion": "Endereço",
     "comoLlegar": "Como chegar",
-    "guardar": "Salvar",
+    "guardar": "Salvar no roteiro",
     "guardado": "Salvo",
     "cargando": "Carregando informação...",
     "michelin": "Estrela Michelin",

@@ -63,7 +63,8 @@
     "visitado": "VISITED",
     "selloFecha": "BA EXPRESS",
     "comuna": "Commune {c}",
-    "cargando": "Loading itinerary..."
+    "cargando": "Loading itinerary...",
+    "eliminarRecorrido": "Delete itinerary"
   },
   "restaurantes": {
     "titulo": "Dining",
@@ -143,7 +144,7 @@
     "descripcion": "Description",
     "historia": "Historical review",
     "comoLlegar": "Directions",
-    "guardar": "Save",
+    "guardar": "Save to itinerary",
     "guardado": "Saved",
     "transporte": "Public transport",
     "escuchar": "Listen to review",
@@ -157,7 +158,7 @@
     "resena": "Special review",
     "direccion": "Address",
     "comoLlegar": "Directions",
-    "guardar": "Save",
+    "guardar": "Save to itinerary",
     "guardado": "Saved",
     "cargando": "Loading information...",
     "michelin": "Michelin Star",

@@ -4,6 +4,7 @@ import { useRouter } from "expo-router";
 import React, { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   ScrollView,
   StyleSheet,
   TouchableOpacity,
@@ -33,7 +34,7 @@ export default function RecorridoScreen() {
   const { t, lang } = useTranslation();
   const router = useRouter();
 
-  const { savedItems, dayMap, toggleItem } = useItinerary();
+  const { savedItems, dayMap, toggleItem, clearAll } = useItinerary();
   const { location } = useLocation();
   const [lugares, setLugares] = useState<Lugar[]>([]);
   const [visitedItems, setVisitedItems] = useState<string[]>([]);
@@ -149,6 +150,25 @@ export default function RecorridoScreen() {
     const visitadosGuardados = lugaresGuardados.filter((l) => isVisited(l.id)).length;
     return visitadosGuardados / lugaresGuardados.length;
   }, [lugaresGuardados, visitedItems]);
+
+  const handleEliminarRecorrido = () => {
+    Alert.alert(
+      lang === "es" ? "¿Eliminar todo tu recorrido?" : lang === "pt" ? "Excluir todo o seu roteiro?" : "Delete your whole itinerary?",
+      lang === "es"
+        ? "Esta acción no se puede deshacer."
+        : lang === "pt"
+        ? "Esta ação não pode ser desfeita."
+        : "This action can't be undone.",
+      [
+        { text: lang === "es" ? "Cancelar" : lang === "pt" ? "Cancelar" : "Cancel", style: "cancel" },
+        {
+          text: lang === "es" ? "Eliminar" : lang === "pt" ? "Excluir" : "Delete",
+          style: "destructive",
+          onPress: clearAll,
+        },
+      ]
+    );
+  };
 
   const handleVerMapa = () => {
     router.push({
@@ -314,11 +334,20 @@ export default function RecorridoScreen() {
           <ScrollView style={styles.scrollArea} showsVerticalScrollIndicator={false}>
             {gruposPorDia.length > 0 ? (
               <>
-                {gruposPorDia.map((grupo) => (
+                {gruposPorDia.map((grupo, grupoIndex) => (
                   <View key={grupo.dia}>
-                    <Text style={[styles.dayGroupLabel, { color: theme.colors.secondary }]}>
-                      {t("recorrido.diaLabel", { d: grupo.dia })}
-                    </Text>
+                    <View style={styles.sectionLabelRow}>
+                      <Text style={[styles.dayGroupLabel, { color: theme.colors.secondary }]}>
+                        {t("recorrido.diaLabel", { d: grupo.dia })}
+                      </Text>
+                      {grupoIndex === 0 && (
+                        <TouchableOpacity onPress={handleEliminarRecorrido} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                          <Text style={[styles.clearAllLink, { color: theme.colors.textSecondary }]}>
+                            {t("recorrido.eliminarRecorrido")}
+                          </Text>
+                        </TouchableOpacity>
+                      )}
+                    </View>
                     {grupo.lugares.map((lugar, index) => renderLugar(lugar, index))}
                   </View>
                 ))}
@@ -333,9 +362,16 @@ export default function RecorridoScreen() {
               </>
             ) : (
               <>
-                <Text style={[styles.comunaLabel, { color: theme.colors.textSecondary }]}>
-                  {t("recorrido.ordenSugerido")}
-                </Text>
+                <View style={styles.sectionLabelRow}>
+                  <Text style={[styles.comunaLabel, { color: theme.colors.textSecondary }]}>
+                    {t("recorrido.ordenSugerido")}
+                  </Text>
+                  <TouchableOpacity onPress={handleEliminarRecorrido} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                    <Text style={[styles.clearAllLink, { color: theme.colors.textSecondary }]}>
+                      {t("recorrido.eliminarRecorrido")}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
                 {sueltos.map((lugar, index) => renderLugar(lugar, index))}
               </>
             )}
@@ -468,6 +504,16 @@ const styles = StyleSheet.create({
   },
   scrollArea: {
     flex: 1,
+  },
+  sectionLabelRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  clearAllLink: {
+    fontSize: 11,
+    fontWeight: "bold",
+    textDecorationLine: "underline",
   },
   comunaLabel: {
     fontSize: 10.5,
